@@ -6,6 +6,7 @@ import {
   usePatchAllBrandConfigs,
   usePatchCurrentBrandConfig,
 } from '../../hooks/useBrandConfigQueries'
+import { extractTokenFromLogin, loginUser } from '../../lib/authApi'
 import {
   formatBrandConfigJson,
   getBrandConfigToken,
@@ -13,6 +14,8 @@ import {
   parseBrandConfigJson,
   setBrandConfigToken,
 } from '../../lib/brandConfigApi'
+import { DynamicKeyValueEditor } from '../brandConfig/DynamicKeyValueEditor'
+import { MultiBrokerConfigEditor } from '../brandConfig/MultiBrokerConfigEditor'
 import type { BrokerBrandConfig } from '../../types/brandConfig'
 import { SectionError } from '../ui/SectionState'
 import { Badge, MetricCard, SectionHeader, SubLabel } from '../ui/Shared'
@@ -170,6 +173,11 @@ export function BrandConfigPanel() {
 
   const [tokenInput, setTokenInput] = useState(getBrandConfigToken())
   const [token, setToken] = useState(getBrandConfigToken())
+  const [loginUserId, setLoginUserId] = useState('69cf7bc6bba75822177c84ef')
+  const [loginFrom, setLoginFrom] = useState('main')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [loginSuccess, setLoginSuccess] = useState<string | null>(null)
   const [currentConfigType, setCurrentConfigType] = useState('')
   const [allBrokersFilter, setAllBrokersFilter] = useState('')
   const [allConfigType, setAllConfigType] = useState('')
@@ -227,6 +235,42 @@ export function BrandConfigPanel() {
   const saveToken = () => {
     setBrandConfigToken(tokenInput)
     setToken(tokenInput.trim())
+    setLoginSuccess(null)
+  }
+
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const trimmedId = loginUserId.trim()
+    if (!trimmedId) {
+      setLoginError('Please enter a User ID')
+      return
+    }
+
+    setIsLoggingIn(true)
+    setLoginError(null)
+    setLoginSuccess(null)
+
+    try {
+      const res = await loginUser(trimmedId, loginFrom?.trim() || undefined)
+      const tokenFound = extractTokenFromLogin(res)
+      if (tokenFound) {
+        setTokenInput(tokenFound)
+        setBrandConfigToken(tokenFound)
+        setToken(tokenFound)
+        setLoginSuccess(`Logged in successfully as ${trimmedId}! Token automatically applied.`)
+        setSummary({
+          endpoint: 'POST /v2/users/login',
+          count: '1',
+          status: 'Authenticated',
+        })
+      } else {
+        setLoginError('Login succeeded but no access token was returned in response.')
+      }
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setIsLoggingIn(false)
+    }
   }
 
   const toggleRow = (broker: string) => {
@@ -319,25 +363,69 @@ export function BrandConfigPanel() {
       </div>
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
-        <SubLabel>Access token</SubLabel>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            type="password"
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            placeholder="Paste access token"
-            className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none sm:flex-1"
-            autoComplete="off"
-          />
-          <button type="button" className="btn-csv w-full justify-center sm:w-auto" onClick={saveToken}>
-            Save token
-          </button>
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <SubLabel>1. Generate Token via Login API</SubLabel>
+            <span className="font-mono-dm text-[11px] text-[var(--purple)]">
+              POST /v2/users/login
+            </span>
+          </div>
+          <form onSubmit={handleLogin} className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="text"
+              value={loginUserId}
+              onChange={(e) => setLoginUserId(e.target.value)}
+              placeholder="User ID (e.g. 69cf7bc6bba75822177c84ef)"
+              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none sm:flex-1"
+            />
+            <input
+              type="text"
+              value={loginFrom}
+              onChange={(e) => setLoginFrom(e.target.value)}
+              placeholder="from (e.g. main)"
+              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none sm:w-28"
+            />
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="btn-csv w-full justify-center sm:w-auto"
+            >
+              {isLoggingIn ? 'Logging in...' : 'Login & Set Token'}
+            </button>
+          </form>
+          {loginSuccess && (
+            <p className="mt-1.5 text-[11px] text-[var(--green)]" role="status">
+              ✓ {loginSuccess}
+            </p>
+          )}
+          {loginError && (
+            <p className="mt-1.5 text-[11px] text-[var(--red)]" role="alert">
+              ✕ {loginError}
+            </p>
+          )}
         </div>
-        <p className="mt-2 text-[11px] text-[var(--text3)]">
-          {tokenReady
-            ? 'Token saved — requests will include Authorization header.'
-            : 'No token set. Save a token or set VITE_BRAND_CONFIG_TOKEN in .env.'}
-        </p>
+
+        <div className="border-t border-[var(--border2)] pt-3">
+          <SubLabel>2. Active Access Token (Authorization: &lt;access_token&gt;)</SubLabel>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="password"
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              placeholder="Paste or edit access token"
+              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none sm:flex-1"
+              autoComplete="off"
+            />
+            <button type="button" className="btn-csv w-full justify-center sm:w-auto" onClick={saveToken}>
+              Save token
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--text3)]">
+            {tokenReady
+              ? 'Token active — requests to /v2/aggregate/... will include Authorization header.'
+              : 'No token set. Login above, paste a token here, or set VITE_BRAND_CONFIG_TOKEN in .env.'}
+          </p>
+        </div>
       </div>
 
       <div className="grid-kpi-3 mb-3">
@@ -392,27 +480,25 @@ export function BrandConfigPanel() {
               disabled={!tokenReady || patchCurrent.isPending}
               onClick={submitCurrentPatch}
             >
-              Replace config
+              {patchCurrent.isPending ? 'Updating...' : 'Replace config'}
             </button>
           </div>
           <p className="mb-2 text-[11px] text-[var(--text3)]">
-            Body is the config object directly (not wrapped). At least one key required.
+            Body is the config object directly. Edit via visual form without typing quotes, or switch to Raw JSON.
           </p>
           {patchError && (
             <p className="mb-2 text-xs text-[var(--red)]" role="alert">
               {patchError}
             </p>
           )}
-          <textarea
-            value={currentPatchJson}
-            onChange={(e) => {
-              setCurrentPatchJson(e.target.value)
+          <DynamicKeyValueEditor
+            jsonString={currentPatchJson}
+            onChange={(val) => {
+              setCurrentPatchJson(val)
               setPatchError(null)
             }}
-            rows={12}
-            spellCheck={false}
-            className="w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] p-3 font-mono-dm text-[11px] leading-snug text-[var(--text2)] outline-none"
-            aria-label="Current broker config JSON"
+            label="Current Broker Theme Fields"
+            ariaLabel="Current broker config editor"
           />
         </div>
       </div>
@@ -482,27 +568,23 @@ export function BrandConfigPanel() {
             disabled={!tokenReady || patchAll.isPending}
             onClick={submitAllPatch}
           >
-            Update listed brokers
+            {patchAll.isPending ? 'Updating...' : 'Update listed brokers'}
           </button>
         </div>
         <p className="mb-2 text-[11px] text-[var(--text3)]">
-          Replace configs for listed brokers only. Unlisted brokers are unchanged.
+          Replace configs for listed brokers only. Edit each broker via visual form or raw JSON.
         </p>
         {allPatchError && (
           <p className="mb-2 text-xs text-[var(--red)]" role="alert">
             {allPatchError}
           </p>
         )}
-        <textarea
-          value={allPatchJson}
-          onChange={(e) => {
-            setAllPatchJson(e.target.value)
+        <MultiBrokerConfigEditor
+          jsonString={allPatchJson}
+          onChange={(val) => {
+            setAllPatchJson(val)
             setAllPatchError(null)
           }}
-          rows={14}
-          spellCheck={false}
-          className="w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] p-3 font-mono-dm text-[11px] leading-snug text-[var(--text2)] outline-none"
-          aria-label="All brokers patch JSON"
         />
       </div>
     </section>

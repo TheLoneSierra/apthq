@@ -9,8 +9,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiProxyTarget =
     env.VITE_API_PROXY_TARGET?.trim() || DEFAULT_API_PROXY_TARGET
-  const brandApiProxyTarget =
-    env.VITE_BRAND_API_PROXY_TARGET?.trim() || 'http://localhost:3000'
+  const v2ProxyTarget =
+    env.VITE_V2_PROXY_TARGET?.trim() ||
+    env.VITE_MAIN_API_PROXY_TARGET?.trim() ||
+    apiProxyTarget
 
   return {
     plugins: [react(), tailwindcss()],
@@ -18,7 +20,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': { target: apiProxyTarget, changeOrigin: true },
         '/health': { target: apiProxyTarget, changeOrigin: true },
-        '/v2': { target: brandApiProxyTarget, changeOrigin: true },
+        '/v2': { target: v2ProxyTarget, changeOrigin: true },
       },
     },
     test: {
