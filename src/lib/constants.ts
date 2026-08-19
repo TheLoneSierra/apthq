@@ -3,10 +3,8 @@ import type { BrokerKey, ServerRow, TokenRow } from '../types/dashboard'
 export const DEFAULT_API_PROXY_TARGET =
   'https://oc5l6dayoesmq6w5gi7nzeefqm0mvfwu.lambda-url.ap-south-1.on.aws'
 
-/** Client-side API base. Empty string uses same-origin (Vite proxy in dev). */
-export const API_BASE =
-  import.meta.env.VITE_API_BASE?.trim() ||
-  (import.meta.env.DEV ? '' : DEFAULT_API_PROXY_TARGET)
+/** Client-side API base. Empty = same-origin (Vite/Vercel proxies handle routing). */
+export const API_BASE = import.meta.env.VITE_API_BASE?.trim() ?? ''
 
 export const BROKER_NAMES: Record<BrokerKey, string> = {
   all: 'All Brokers',

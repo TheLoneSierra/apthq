@@ -16,12 +16,26 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_API_BASE` | Client API base URL. Leave empty in dev to use the Vite proxy. |
-| `VITE_API_PROXY_TARGET` | Backend URL for the dev proxy (server-side only). |
+| `VITE_API_BASE` | Leave **empty** on Vercel. Same-origin `/api`, `/health`, and `/v2` are routed by `vercel.json`. |
+| `VITE_API_PROXY_TARGET` | Analytics Lambda URL for local dev proxy (`/api`, `/health`). |
+| `VITE_BRAND_API_PROXY_TARGET` | Brand config backend for local dev (`/v2`). Default: `http://localhost:3000`. |
+| `VITE_BRAND_CONFIG_TOKEN` | Optional default token for Brand Config tab. |
 
-In development, `/api` and `/health` are proxied to avoid CORS issues.
+### Two backends
 
-For production, deploy behind a reverse proxy that forwards `/api` and `/health` to the Lambda backend, and keep `VITE_API_BASE` empty (same-origin).
+| Routes | Backend |
+|--------|---------|
+| `/api/v1/*`, `/health` | AWS Lambda (analytics) |
+| `/v2/aggregate/*`, `/v2/users/login` | Brand config API (Vercel serverless in prod, `server.js` locally) |
+
+**Local dev:** run both processes:
+
+```bash
+npm run server   # brand config on :3000
+npm run dev      # frontend on :5173
+```
+
+**Vercel:** deploy this repo as-is. Set `VITE_API_BASE` to empty (or remove it). Do **not** point `VITE_API_BASE` at the Lambda URL — that breaks Brand Config with 404.
 
 ## Scripts
 
