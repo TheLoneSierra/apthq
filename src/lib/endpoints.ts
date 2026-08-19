@@ -23,6 +23,10 @@ export const API_ROUTES = {
     config: '/v2/aggregate/config',
     allConfigs: '/v2/aggregate/all_configs',
   },
+
+  auth: {
+    userLogin: '/v2/users/login',
+  },
 } as const
 
 export type HealthCheckKind = keyof typeof API_ROUTES.healthCheck
@@ -47,4 +51,11 @@ export function analyticsParams(
 
 export function healthCheckPath(kind: HealthCheckKind): string {
   return API_ROUTES.healthCheck[kind]
+}
+
+/** POST /v2/users/login?userId=…&from=… (optional) */
+export function userLoginUrl(userId: string, from?: string): string {
+  const params = new URLSearchParams({ userId })
+  if (from) params.set('from', from)
+  return `${API_ROUTES.auth.userLogin}?${params.toString()}`
 }
