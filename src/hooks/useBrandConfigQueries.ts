@@ -18,6 +18,7 @@ export function useCurrentBrandConfig(
       fetchCurrentBrandConfig(filters.token, filters.configType, signal),
     enabled: enabled && Boolean(filters.token),
     retry: 1,
+    staleTime: 60_000,
   })
 }
 
@@ -36,6 +37,7 @@ export function useAllBrandConfigs(
       ),
     enabled: enabled && Boolean(filters.token),
     retry: 1,
+    staleTime: 60_000,
   })
 }
 

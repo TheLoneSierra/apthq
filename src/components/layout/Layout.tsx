@@ -219,6 +219,7 @@ export function SubTabs() {
     { id: 'tech', label: 'Tech & System' },
     { id: 'healthcheck', label: 'Health Check API' },
     { id: 'brandconfig', label: 'Brand Config' },
+    { id: 'healthcheckv3', label: 'Health Check v3' },
   ]
 
   const onKeyDown = (e: ReactKeyboardEvent, index: number) => {

@@ -47,3 +47,8 @@ export const brandConfigKeys = {
   allConfigs: (f: BrandConfigFilters) =>
     [...brandConfigKeys.all, 'all-configs', f] as const,
 }
+
+export const healthV3Keys = {
+  all: ['health-check-v3'] as const,
+  positionService: () => [...healthV3Keys.all, 'position-service'] as const,
+}

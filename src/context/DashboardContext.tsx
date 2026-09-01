@@ -66,12 +66,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [activePreset, setActivePreset] = useState<PeriodPreset | null>('30d')
   const [activeTab, setActiveTab] = useState<MainTab>('analytics')
 
+  const analyticsEnabled = activeTab === 'analytics'
+
   const { sections, loading, partialErrors, allFailed, apiError, reload } =
-    useDashboardQueries(broker, dateRange)
+    useDashboardQueries(broker, dateRange, {
+      analyticsEnabled,
+      healthEnabled: true,
+    })
 
   useEffect(() => {
     const synced = syncBrokersFromHealth(sections.health.data, broker)
-    setBrokerOptions(synced.options)
+    setBrokerOptions((prev) => {
+      const same =
+        prev.length === synced.options.length &&
+        prev.every(
+          (opt, i) =>
+            opt.value === synced.options[i]?.value &&
+            opt.label === synced.options[i]?.label,
+        )
+      return same ? prev : synced.options
+    })
     if (synced.broker !== broker) {
       setBrokerState(synced.broker)
     }

@@ -1,6 +1,6 @@
 export type BrokerKey = string
 
-export type MainTab = 'analytics' | 'tech' | 'healthcheck' | 'brandconfig'
+export type MainTab = 'analytics' | 'tech' | 'healthcheck' | 'brandconfig' | 'healthcheckv3'
 export type TechTab = 'tokens' | 'servers'
 export type PeriodPreset = '7d' | '30d' | '90d' | 'ytd'
 export type ServerFilter = 'all' | 'stale' | 'drift'

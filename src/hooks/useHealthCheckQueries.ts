@@ -13,6 +13,7 @@ export function useHealthCheckLtp(enabled: boolean) {
     queryFn: ({ signal }) => fetchHealthCheckLtp(signal),
     enabled,
     retry: 1,
+    staleTime: 60_000,
     select: (data) => parseHealthRows(data, 'service'),
   })
 }
@@ -23,6 +24,7 @@ export function useHealthCheckIndicator(enabled: boolean) {
     queryFn: ({ signal }) => fetchHealthCheckIndicator(signal),
     enabled,
     retry: 1,
+    staleTime: 60_000,
     select: (data) => parseHealthRows(data, 'service'),
   })
 }

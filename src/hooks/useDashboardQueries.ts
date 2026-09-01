@@ -31,49 +31,69 @@ function toSection<T>(query: UseQueryResult<T, Error>): SectionSlice<T> {
   }
 }
 
-export function useDashboardQueries(broker: BrokerKey, dateRange: DateRange) {
+export function useDashboardQueries(
+  broker: BrokerKey,
+  dateRange: DateRange,
+  options: {
+    analyticsEnabled?: boolean
+    healthEnabled?: boolean
+  } = {},
+) {
+  const analyticsEnabled = options.analyticsEnabled ?? true
+  const healthEnabled = options.healthEnabled ?? true
   const filters = filtersFrom(broker, dateRange)
 
   const mainActivityQuery = useQuery({
     queryKey: dashboardKeys.mainActivity(filters),
     queryFn: ({ signal }) =>
       fetchMainActivity(filters.broker, filters.startDate, filters.endDate, signal),
-    refetchInterval: 30_000,
-    retry: 2,
+    enabled: analyticsEnabled,
+    refetchInterval: analyticsEnabled ? 30_000 : false,
+    retry: 1,
+    staleTime: 60_000,
   })
 
   const usersQuery = useQuery({
     queryKey: dashboardKeys.users(filters),
     queryFn: ({ signal }) =>
       fetchUsers(filters.broker, filters.startDate, filters.endDate, signal),
-    retry: 2,
+    enabled: analyticsEnabled,
+    retry: 1,
+    staleTime: 60_000,
   })
 
   const liveTradingQuery = useQuery({
     queryKey: dashboardKeys.liveTrading(filters),
     queryFn: ({ signal }) =>
       fetchLiveTrading(filters.broker, filters.startDate, filters.endDate, signal),
-    retry: 2,
+    enabled: analyticsEnabled,
+    retry: 1,
+    staleTime: 60_000,
   })
 
   const paperTradingQuery = useQuery({
     queryKey: dashboardKeys.paperTrading(filters),
     queryFn: ({ signal }) =>
       fetchPaperTrading(filters.broker, filters.startDate, filters.endDate, signal),
-    retry: 2,
+    enabled: analyticsEnabled,
+    retry: 1,
+    staleTime: 60_000,
   })
 
   const strategiesQuery = useQuery({
     queryKey: dashboardKeys.strategies(filters),
     queryFn: ({ signal }) =>
       fetchStrategies(filters.broker, filters.startDate, filters.endDate, signal),
-    retry: 2,
+    enabled: analyticsEnabled,
+    retry: 1,
+    staleTime: 60_000,
   })
 
   const healthQuery = useQuery({
     queryKey: dashboardKeys.health(),
     queryFn: ({ signal }) => fetchHealth(signal),
-    staleTime: 60_000,
+    enabled: healthEnabled,
+    staleTime: 300_000,
     retry: 1,
   })
 

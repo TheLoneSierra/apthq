@@ -19,6 +19,10 @@
     {
       "source": "/v2/aggregate/all_configs",
       "destination": "/api/v2/aggregate/all_configs"
+    },
+    {
+      "source": "/v3/:path*",
+      "destination": "https://api.aptdemo.atoms.trade/v3/:path*"
     }
   ]
 }

@@ -23,12 +23,21 @@ const BrandConfigPanel = lazy(() =>
     default: m.BrandConfigPanel,
   })),
 )
+const HealthCheckV3Panel = lazy(() =>
+  import('./components/panels/HealthCheckV3Panel').then((m) => ({
+    default: m.HealthCheckV3Panel,
+  })),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      staleTime: 60_000,
+      gcTime: 300_000,
       refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      retry: 1,
     },
   },
 })
@@ -55,6 +64,11 @@ function TabPanel() {
     brandconfig: (
       <ErrorBoundary label="Brand Config">
         <BrandConfigPanel />
+      </ErrorBoundary>
+    ),
+    healthcheckv3: (
+      <ErrorBoundary label="Health Check v3">
+        <HealthCheckV3Panel />
       </ErrorBoundary>
     ),
   }[activeTab]
