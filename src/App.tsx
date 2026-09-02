@@ -28,6 +28,11 @@ const HealthCheckV3Panel = lazy(() =>
     default: m.HealthCheckV3Panel,
   })),
 )
+const DebugStrategyPanel = lazy(() =>
+  import('./components/panels/DebugStrategyPanel').then((m) => ({
+    default: m.DebugStrategyPanel,
+  })),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +74,11 @@ function TabPanel() {
     healthcheckv3: (
       <ErrorBoundary label="Health Check v3">
         <HealthCheckV3Panel />
+      </ErrorBoundary>
+    ),
+    debugstrategy: (
+      <ErrorBoundary label="Debug Strategy">
+        <DebugStrategyPanel />
       </ErrorBoundary>
     ),
   }[activeTab]

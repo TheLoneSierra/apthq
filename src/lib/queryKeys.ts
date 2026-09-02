@@ -52,3 +52,7 @@ export const healthV3Keys = {
   all: ['health-check-v3'] as const,
   positionService: () => [...healthV3Keys.all, 'position-service'] as const,
 }
+
+export const debugStrategyKeys = {
+  all: ['debug-strategy'] as const,
+}
