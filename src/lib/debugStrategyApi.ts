@@ -28,6 +28,19 @@ export function debugStrategyFullUrl(strategyId: string): string {
   return `${DEBUG_STRATEGY_API_ORIGIN}${debugStrategyPath(strategyId)}`
 }
 
+/** Optional aptdemo v3 path when both IDs are known (reference / copy only). */
+export const DEBUG_STRATEGY_V3_ORIGIN = 'https://api.aptdemo.atoms.trade'
+
+export function debugStrategyV3Path(strategyId: string, sessionId: string): string {
+  const sid = encodeURIComponent(strategyId.trim())
+  const sess = encodeURIComponent(sessionId.trim())
+  return `/v3/strategies/${sid}/${sess}`
+}
+
+export function debugStrategyV3FullUrl(strategyId: string, sessionId: string): string {
+  return `${DEBUG_STRATEGY_V3_ORIGIN}${debugStrategyV3Path(strategyId, sessionId)}`
+}
+
 export function formatDebugJson(value: unknown): string {
   return JSON.stringify(value, null, 2)
 }

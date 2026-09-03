@@ -4,6 +4,7 @@ import {
   DEBUG_STRATEGY_API_ORIGIN,
   debugStrategyFullUrl,
   debugStrategyPathPreview,
+  debugStrategyV3FullUrl,
   extractStrategyData,
   flattenTopLevelFields,
   formatDebugJson,
@@ -120,6 +121,7 @@ function CopyableTextRow({
 
 export function DebugStrategyPanel() {
   const [strategyId, setStrategyId] = useState('')
+  const [sessionId, setSessionId] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
@@ -166,6 +168,10 @@ export function DebugStrategyPanel() {
 
   const apiPath = debugStrategyPathPreview(strategyId)
   const apiFullUrl = strategyId.trim() ? debugStrategyFullUrl(strategyId) : ''
+  const v3FullUrl =
+    strategyId.trim() && sessionId.trim()
+      ? debugStrategyV3FullUrl(strategyId, sessionId)
+      : ''
 
   return (
     <section>
@@ -181,30 +187,52 @@ export function DebugStrategyPanel() {
         <span className="font-mono-dm">GET /api/v1/health-check/position?id=…</span>. Paste a
         Strategy / position UUID — the Lambda fans out to all broker backends and returns the
         JSON response. Base:{' '}
-        <span className="font-mono-dm break-all">{DEBUG_STRATEGY_API_ORIGIN}</span>
+        <span className="font-mono-dm break-all">{DEBUG_STRATEGY_API_ORIGIN}</span>. Session
+        UUID is optional — stored for reference and the aptdemo v3 copy URL; the Lambda lookup
+        uses Strategy ID only.
       </div>
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
-        <div className="mb-2.5">
-          <label className="mb-1 block text-[10px] uppercase tracking-wider text-[var(--text3)]">
-            Strategy ID
-          </label>
-          <input
-            type="text"
-            value={strategyId}
-            onChange={(e) => {
-              setStrategyId(e.target.value)
-              setInputError(null)
-            }}
-            placeholder="Strategy UUID"
-            className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
-          />
+        <div className="mb-2.5 grid gap-2 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[var(--text3)]">
+              Strategy ID
+            </label>
+            <input
+              type="text"
+              value={strategyId}
+              onChange={(e) => {
+                setStrategyId(e.target.value)
+                setInputError(null)
+              }}
+              placeholder="Strategy UUID"
+              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[var(--text3)]">
+              Session UUID
+            </label>
+            <input
+              type="text"
+              value={sessionId}
+              onChange={(e) => {
+                setSessionId(e.target.value)
+                setInputError(null)
+              }}
+              placeholder="Session UUID (optional)"
+              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
           <CopyableTextRow label="API path" value={apiPath} />
           {apiFullUrl ? (
             <CopyableTextRow label="Full URL (Lambda)" value={apiFullUrl} />
+          ) : null}
+          {v3FullUrl ? (
+            <CopyableTextRow label="V3 URL (aptdemo, reference)" value={v3FullUrl} />
           ) : null}
           <div className="flex justify-end pt-1">
             <button

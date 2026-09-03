@@ -5,6 +5,7 @@ import {
   debugStrategyFullUrl,
   debugStrategyPath,
   debugStrategyPathPreview,
+  debugStrategyV3FullUrl,
   extractStrategyData,
   flattenTopLevelFields,
   isApiErrorBody,
@@ -31,6 +32,12 @@ describe('debugStrategyApi', () => {
   it('builds full Lambda URL for copy/paste', () => {
     expect(debugStrategyFullUrl('strategy-1')).toBe(
       `${DEFAULT_API_PROXY_TARGET}/api/v1/health-check/position?id=strategy-1`,
+    )
+  })
+
+  it('builds aptdemo v3 reference URL when session is provided', () => {
+    expect(debugStrategyV3FullUrl('strategy-1', 'session-2')).toBe(
+      'https://api.aptdemo.atoms.trade/v3/strategies/strategy-1/session-2',
     )
   })
 
