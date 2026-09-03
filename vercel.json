@@ -5,6 +5,10 @@
       "destination": "https://oc5l6dayoesmq6w5gi7nzeefqm0mvfwu.lambda-url.ap-south-1.on.aws/api/v1/:path*"
     },
     {
+      "source": "/api/v3/:path*",
+      "destination": "https://oc5l6dayoesmq6w5gi7nzeefqm0mvfwu.lambda-url.ap-south-1.on.aws/api/v3/:path*"
+    },
+    {
       "source": "/health",
       "destination": "https://oc5l6dayoesmq6w5gi7nzeefqm0mvfwu.lambda-url.ap-south-1.on.aws/health"
     },

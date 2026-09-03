@@ -4,41 +4,37 @@ import type { DebugStrategyFieldRow, DebugStrategyResult } from '../types/debugS
 /** Apt HQ Lambda — same backend as Analytics / Health Check v1 */
 export const DEBUG_STRATEGY_API_ORIGIN = DEFAULT_API_PROXY_TARGET
 
-export const STRATEGY_DEBUG_PATH = '/api/v1/health-check/position'
+export const STRATEGY_DEBUG_PATH = '/api/v3/strategies'
 
 const API_BASE = import.meta.env.VITE_API_BASE?.trim() ?? ''
 
-export function debugStrategyPath(strategyId: string): string {
-  const params = new URLSearchParams({ id: strategyId.trim() })
-  return `${STRATEGY_DEBUG_PATH}?${params.toString()}`
+export function debugStrategyPath(strategyId: string, sessionId: string): string {
+  const sid = encodeURIComponent(strategyId.trim())
+  const sess = encodeURIComponent(sessionId.trim())
+  return `${STRATEGY_DEBUG_PATH}/${sid}/${sess}`
 }
 
-export function debugStrategyPathPreview(strategyId: string): string {
-  if (strategyId.trim()) return debugStrategyPath(strategyId)
-  return `${STRATEGY_DEBUG_PATH}?id=:strategyId`
-}
-
-export function debugStrategyUrl(strategyId: string): string {
+export function debugStrategyUrl(strategyId: string, sessionId: string): string {
   const base = API_BASE.replace(/\/$/, '')
-  const path = debugStrategyPath(strategyId)
+  const path = debugStrategyPath(strategyId, sessionId)
   return base ? `${base}${path}` : path
 }
 
-export function debugStrategyFullUrl(strategyId: string): string {
-  return `${DEBUG_STRATEGY_API_ORIGIN}${debugStrategyPath(strategyId)}`
+export function debugStrategyFullUrl(strategyId: string, sessionId: string): string {
+  return `${DEBUG_STRATEGY_API_ORIGIN}${debugStrategyPath(strategyId, sessionId)}`
 }
 
-/** Optional aptdemo v3 path when both IDs are known (reference / copy only). */
-export const DEBUG_STRATEGY_V3_ORIGIN = 'https://api.aptdemo.atoms.trade'
+/** aptdemo reference URL (same path shape, different host). */
+export const DEBUG_STRATEGY_APTDEMO_ORIGIN = 'https://api.aptdemo.atoms.trade'
 
-export function debugStrategyV3Path(strategyId: string, sessionId: string): string {
+export function debugStrategyAptdemoPath(strategyId: string, sessionId: string): string {
   const sid = encodeURIComponent(strategyId.trim())
   const sess = encodeURIComponent(sessionId.trim())
   return `/v3/strategies/${sid}/${sess}`
 }
 
-export function debugStrategyV3FullUrl(strategyId: string, sessionId: string): string {
-  return `${DEBUG_STRATEGY_V3_ORIGIN}${debugStrategyV3Path(strategyId, sessionId)}`
+export function debugStrategyAptdemoFullUrl(strategyId: string, sessionId: string): string {
+  return `${DEBUG_STRATEGY_APTDEMO_ORIGIN}${debugStrategyAptdemoPath(strategyId, sessionId)}`
 }
 
 export function formatDebugJson(value: unknown): string {
@@ -114,13 +110,16 @@ export function isApiErrorBody(body: unknown): boolean {
 
 export async function fetchDebugStrategy(
   strategyId: string,
+  sessionId: string,
   signal?: AbortSignal,
 ): Promise<DebugStrategyResult> {
   const trimmedStrategy = strategyId.trim()
+  const trimmedSession = sessionId.trim()
 
   if (!trimmedStrategy) throw new Error('Strategy ID is required')
+  if (!trimmedSession) throw new Error('Session UUID is required')
 
-  const res = await fetch(debugStrategyUrl(trimmedStrategy), {
+  const res = await fetch(debugStrategyUrl(trimmedStrategy, trimmedSession), {
     headers: { Accept: 'application/json' },
     signal,
   })

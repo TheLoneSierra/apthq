@@ -2,9 +2,8 @@ import { useMemo, useState } from 'react'
 import { useDebugStrategyFetch } from '../../hooks/useDebugStrategyQueries'
 import {
   DEBUG_STRATEGY_API_ORIGIN,
+  debugStrategyAptdemoFullUrl,
   debugStrategyFullUrl,
-  debugStrategyPathPreview,
-  debugStrategyV3FullUrl,
   extractStrategyData,
   flattenTopLevelFields,
   formatDebugJson,
@@ -160,17 +159,23 @@ export function DebugStrategyPanel() {
       setInputError('Strategy ID is required.')
       return
     }
+    if (!sessionId.trim()) {
+      setInputError('Session UUID is required.')
+      return
+    }
     setInputError(null)
-    mutation.mutate({ strategyId })
+    mutation.mutate({ strategyId, sessionId })
   }
 
   const chipCls = mutation.data?.ok ? 'ok' : mutation.data ? 'warn' : 'ok'
 
-  const apiPath = debugStrategyPathPreview(strategyId)
-  const apiFullUrl = strategyId.trim() ? debugStrategyFullUrl(strategyId) : ''
-  const v3FullUrl =
+  const apiFullUrl =
     strategyId.trim() && sessionId.trim()
-      ? debugStrategyV3FullUrl(strategyId, sessionId)
+      ? debugStrategyFullUrl(strategyId, sessionId)
+      : ''
+  const aptdemoFullUrl =
+    strategyId.trim() && sessionId.trim()
+      ? debugStrategyAptdemoFullUrl(strategyId, sessionId)
       : ''
 
   return (
@@ -183,13 +188,10 @@ export function DebugStrategyPanel() {
       />
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border2)] bg-[var(--s1)] p-3 text-xs leading-relaxed text-[var(--text2)]">
-        Uses the Apt HQ Lambda API (same base as Analytics):{' '}
-        <span className="font-mono-dm">GET /api/v1/health-check/position?id=…</span>. Paste a
-        Strategy / position UUID — the Lambda fans out to all broker backends and returns the
-        JSON response. Base:{' '}
-        <span className="font-mono-dm break-all">{DEBUG_STRATEGY_API_ORIGIN}</span>. Session
-        UUID is optional — stored for reference and the aptdemo v3 copy URL; the Lambda lookup
-        uses Strategy ID only.
+        Uses the Apt HQ Lambda API:{' '}
+        <span className="font-mono-dm">GET /api/v3/strategies/&#123;strategyId&#125;/&#123;sessionId&#125;</span>.
+        Enter Strategy ID and Session UUID — the Lambda returns the strategy JSON. Base:{' '}
+        <span className="font-mono-dm break-all">{DEBUG_STRATEGY_API_ORIGIN}</span>
       </div>
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
@@ -220,19 +222,17 @@ export function DebugStrategyPanel() {
                 setSessionId(e.target.value)
                 setInputError(null)
               }}
-              placeholder="Session UUID (optional)"
               className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <CopyableTextRow label="API path" value={apiPath} />
           {apiFullUrl ? (
             <CopyableTextRow label="Full URL (Lambda)" value={apiFullUrl} />
           ) : null}
-          {v3FullUrl ? (
-            <CopyableTextRow label="V3 URL (aptdemo, reference)" value={v3FullUrl} />
+          {aptdemoFullUrl ? (
+            <CopyableTextRow label="Full URL (aptdemo)" value={aptdemoFullUrl} />
           ) : null}
           <div className="flex justify-end pt-1">
             <button
@@ -359,8 +359,9 @@ export function DebugStrategyPanel() {
 
       {!mutation.data && !mutation.isPending && !mutation.isError && (
         <div className="rounded-[var(--rlg)] border border-dashed border-[var(--border2)] bg-[var(--s1)] p-8 text-center text-xs text-[var(--text3)]">
-          Enter a Strategy ID and click Debug Strategy. Requests go to the Lambda Apt HQ API
-          via <span className="font-mono-dm">/api/v1/health-check/position</span>.
+          Enter Strategy ID and Session UUID, then click Debug Strategy. Requests go to the Lambda
+          Apt HQ API via{' '}
+          <span className="font-mono-dm">/api/v3/strategies/&#123;strategyId&#125;/&#123;sessionId&#125;</span>.
         </div>
       )}
     </section>

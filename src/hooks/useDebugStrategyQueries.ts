@@ -6,6 +6,7 @@ import type { DebugStrategyParams } from '../types/debugStrategy'
 export function useDebugStrategyFetch() {
   return useMutation({
     mutationKey: debugStrategyKeys.all,
-    mutationFn: ({ strategyId }: DebugStrategyParams) => fetchDebugStrategy(strategyId),
+    mutationFn: ({ strategyId, sessionId }: DebugStrategyParams) =>
+      fetchDebugStrategy(strategyId, sessionId),
   })
 }
