@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 const DEFAULT_API_PROXY_TARGET =
   'https://oc5l6dayoesmq6w5gi7nzeefqm0mvfwu.lambda-url.ap-south-1.on.aws'
 
+const DEFAULT_V2_PROXY_TARGET = 'https://api.aptdemo.atoms.trade'
+
 const DEFAULT_HEALTH_V3_PROXY_TARGET = 'https://api.aptdemo.atoms.trade'
 
 export default defineConfig(({ mode }) => {
@@ -14,7 +16,7 @@ export default defineConfig(({ mode }) => {
   const v2ProxyTarget =
     env.VITE_V2_PROXY_TARGET?.trim() ||
     env.VITE_MAIN_API_PROXY_TARGET?.trim() ||
-    apiProxyTarget
+    DEFAULT_V2_PROXY_TARGET
   const healthV3ProxyTarget =
     env.VITE_HEALTH_V3_PROXY_TARGET?.trim() || DEFAULT_HEALTH_V3_PROXY_TARGET
 

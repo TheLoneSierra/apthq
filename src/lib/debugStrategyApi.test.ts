@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_API_PROXY_TARGET } from './constants'
 import {
+  DEBUG_STRATEGY_API_ORIGIN,
   debugStrategyFullUrl,
   debugStrategyPath,
+  debugStrategyPathPreview,
   extractStrategyData,
   flattenTopLevelFields,
   isApiErrorBody,
@@ -9,55 +12,57 @@ import {
 } from './debugStrategyApi'
 
 describe('debugStrategyApi', () => {
-  it('builds strategy debug path', () => {
-    expect(
-      debugStrategyPath('strategy-1', 'session-2'),
-    ).toBe('/v3/strategies/strategy-1/session-2')
+  it('uses Lambda as debug strategy origin', () => {
+    expect(DEBUG_STRATEGY_API_ORIGIN).toBe(DEFAULT_API_PROXY_TARGET)
   })
 
-  it('builds full strategy debug URL for copy/paste', () => {
-    expect(
-      debugStrategyFullUrl('strategy-1', 'session-2'),
-    ).toBe('https://api.aptdemo.atoms.trade/v3/strategies/strategy-1/session-2')
+  it('builds Lambda position lookup path', () => {
+    expect(debugStrategyPath('strategy-1')).toBe(
+      '/api/v1/health-check/position?id=strategy-1',
+    )
+  })
+
+  it('shows readable preview placeholder', () => {
+    expect(debugStrategyPathPreview('')).toBe(
+      '/api/v1/health-check/position?id=:strategyId',
+    )
+  })
+
+  it('builds full Lambda URL for copy/paste', () => {
+    expect(debugStrategyFullUrl('strategy-1')).toBe(
+      `${DEFAULT_API_PROXY_TARGET}/api/v1/health-check/position?id=strategy-1`,
+    )
+  })
+
+  it('summarizes position lookup result', () => {
+    const summary = summarizeDebugResult({
+      ok: true,
+      status: 200,
+      body: {
+        position_id: 'strategy-1',
+        brokers: { tradesmart: {} },
+        total: 1,
+      },
+    })
+    expect(summary.hasStrategyData).toBe(true)
+    expect(summary.message).toContain('strategy-1')
+  })
+
+  it('extracts brokers from response', () => {
+    expect(extractStrategyData({ brokers: { a: 1 } })).toEqual({ a: 1 })
+  })
+
+  it('detects api error bodies', () => {
+    expect(isApiErrorBody({ detail: 'Not Found' })).toBe(true)
+    expect(isApiErrorBody({ position_id: 'x', brokers: {} })).toBe(false)
   })
 
   it('flattens top-level response fields', () => {
     const rows = flattenTopLevelFields({
-      success: true,
-      message: 'ok',
-      data: { id: '1' },
+      position_id: '1',
+      brokers: {},
+      total: 3,
     })
     expect(rows).toHaveLength(3)
-    expect(rows[2].isJson).toBe(true)
-  })
-
-  it('summarizes debug result', () => {
-    const summary = summarizeDebugResult({
-      ok: false,
-      status: 404,
-      body: { message: 'Strategy not found', requestId: 'req-1' },
-    })
-    expect(summary.message).toBe('Strategy not found')
-    expect(summary.requestId).toBe('req-1')
-    expect(summary.hasStrategyData).toBe(false)
-  })
-
-  it('detects strategy data in success body', () => {
-    const summary = summarizeDebugResult({
-      ok: true,
-      status: 200,
-      body: { success: true, data: { id: '1' } },
-    })
-    expect(summary.hasStrategyData).toBe(true)
-  })
-
-  it('extracts nested strategy data', () => {
-    expect(extractStrategyData({ data: { id: '1' } })).toEqual({ id: '1' })
-    expect(extractStrategyData({ message: 'missing' })).toBeNull()
-  })
-
-  it('detects api error bodies', () => {
-    expect(isApiErrorBody({ error: true, message: 'Strategy not found' })).toBe(true)
-    expect(isApiErrorBody({ success: true, data: {} })).toBe(false)
   })
 })

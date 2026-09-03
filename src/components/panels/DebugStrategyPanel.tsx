@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useDebugStrategyFetch } from '../../hooks/useDebugStrategyQueries'
 import {
+  DEBUG_STRATEGY_API_ORIGIN,
   debugStrategyFullUrl,
-  debugStrategyPath,
+  debugStrategyPathPreview,
   extractStrategyData,
   flattenTopLevelFields,
   formatDebugJson,
@@ -119,7 +120,6 @@ function CopyableTextRow({
 
 export function DebugStrategyPanel() {
   const [strategyId, setStrategyId] = useState('')
-  const [sessionId, setSessionId] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
@@ -158,80 +158,53 @@ export function DebugStrategyPanel() {
       setInputError('Strategy ID is required.')
       return
     }
-    if (!sessionId.trim()) {
-      setInputError('Session ID is required.')
-      return
-    }
     setInputError(null)
-    mutation.mutate({ strategyId, sessionId })
+    mutation.mutate({ strategyId })
   }
 
   const chipCls = mutation.data?.ok ? 'ok' : mutation.data ? 'warn' : 'ok'
 
-  const apiPath = debugStrategyPath(
-    strategyId || ':strategyId',
-    sessionId || ':sessionId',
-  )
-  const apiFullUrl =
-    strategyId.trim() && sessionId.trim()
-      ? debugStrategyFullUrl(strategyId, sessionId)
-      : ''
+  const apiPath = debugStrategyPathPreview(strategyId)
+  const apiFullUrl = strategyId.trim() ? debugStrategyFullUrl(strategyId) : ''
 
   return (
     <section>
       <SectionHeader
-        title="Debug Strategy — v3 Strategy Lookup"
+        title="Debug Strategy — Lambda Lookup"
         titleColor="var(--purple)"
         badge={<Badge variant="strat">Debug</Badge>}
         lineColor="var(--pur-bd)"
       />
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border2)] bg-[var(--s1)] p-3 text-xs leading-relaxed text-[var(--text2)]">
-        Calls{' '}
-        <span className="font-mono-dm">GET /v3/strategies/:strategyId/:sessionId</span>{' '}
-        on the Apt demo API. Use a <strong>real Strategy ID and Session ID</strong> from an
-        active strategy session — the pre-filled example IDs may return{' '}
-        <span className="font-mono-dm">Strategy not found</span>.
+        Uses the Apt HQ Lambda API (same base as Analytics):{' '}
+        <span className="font-mono-dm">GET /api/v1/health-check/position?id=…</span>. Paste a
+        Strategy / position UUID — the Lambda fans out to all broker backends and returns the
+        JSON response. Base:{' '}
+        <span className="font-mono-dm break-all">{DEBUG_STRATEGY_API_ORIGIN}</span>
       </div>
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
-        <div className="mb-2.5 grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[var(--text3)]">
-              Strategy ID
-            </label>
-            <input
-              type="text"
-              value={strategyId}
-              onChange={(e) => {
-                setStrategyId(e.target.value)
-                setInputError(null)
-              }}
-              placeholder="Strategy UUID"
-              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[10px] uppercase tracking-wider text-[var(--text3)]">
-              Session ID
-            </label>
-            <input
-              type="text"
-              value={sessionId}
-              onChange={(e) => {
-                setSessionId(e.target.value)
-                setInputError(null)
-              }}
-              placeholder="Session UUID"
-              className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
-            />
-          </div>
+        <div className="mb-2.5">
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-[var(--text3)]">
+            Strategy ID
+          </label>
+          <input
+            type="text"
+            value={strategyId}
+            onChange={(e) => {
+              setStrategyId(e.target.value)
+              setInputError(null)
+            }}
+            placeholder="Strategy UUID"
+            className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none focus:border-[var(--purple)]"
+          />
         </div>
 
         <div className="space-y-2">
           <CopyableTextRow label="API path" value={apiPath} />
           {apiFullUrl ? (
-            <CopyableTextRow label="Full URL (Postman / browser)" value={apiFullUrl} />
+            <CopyableTextRow label="Full URL (Lambda)" value={apiFullUrl} />
           ) : null}
           <div className="flex justify-end pt-1">
             <button
@@ -268,10 +241,8 @@ export function DebugStrategyPanel() {
         <>
           {isErrorResponse && (
             <div className="mb-3 rounded-[var(--rlg)] border border-[var(--amber)]/40 bg-[rgba(245,158,11,0.08)] p-3 text-xs leading-relaxed text-[var(--text2)]">
-              <strong className="text-[var(--amber)]">API responded — strategy not found.</strong>{' '}
-              The request reached the server successfully. The JSON below is the full error
-              response. To see strategy debug data, paste valid Strategy ID and Session ID
-              from your running strategy (not the old example UUIDs).
+              <strong className="text-[var(--amber)]">Lookup returned errors.</strong> The Lambda
+              API responded — expand broker rows below for per-broker details.
             </div>
           )}
 
@@ -283,14 +254,14 @@ export function DebugStrategyPanel() {
               {mutation.data.ok ? 'SUCCESS' : `HTTP ${mutation.data.status}`}
             </span>
             {summary.hasStrategyData && (
-              <span className="hc-chip ok">Strategy data present</span>
+              <span className="hc-chip ok">Broker data present</span>
             )}
           </div>
 
           {strategyData != null && (
             <div className="mb-3 overflow-hidden rounded-[var(--rlg)] border border-[var(--pur-bd)] bg-[var(--s1)] p-[18px]">
               <div className="mb-2.5 text-xs font-medium text-[var(--purple)]">
-                Strategy data
+                Broker responses
               </div>
               {strategyFieldRows.length > 0 ? (
                 <div className="overflow-hidden rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)]">
@@ -360,8 +331,8 @@ export function DebugStrategyPanel() {
 
       {!mutation.data && !mutation.isPending && !mutation.isError && (
         <div className="rounded-[var(--rlg)] border border-dashed border-[var(--border2)] bg-[var(--s1)] p-8 text-center text-xs text-[var(--text3)]">
-          Enter Strategy ID and Session ID, then click Debug Strategy to load the API
-          response.
+          Enter a Strategy ID and click Debug Strategy. Requests go to the Lambda Apt HQ API
+          via <span className="font-mono-dm">/api/v1/health-check/position</span>.
         </div>
       )}
     </section>

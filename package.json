@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mock": "node server.js",
     "server": "node server.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

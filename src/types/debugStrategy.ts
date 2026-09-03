@@ -1,6 +1,5 @@
 export type DebugStrategyParams = {
   strategyId: string
-  sessionId: string
 }
 
 export interface DebugStrategyResult {

@@ -1,30 +1,31 @@
+import { DEFAULT_API_PROXY_TARGET } from './constants'
 import type { DebugStrategyFieldRow, DebugStrategyResult } from '../types/debugStrategy'
 
-export const DEBUG_STRATEGY_DEFAULT_STRATEGY_ID = ''
-export const DEBUG_STRATEGY_DEFAULT_SESSION_ID = ''
+/** Apt HQ Lambda — same backend as Analytics / Health Check v1 */
+export const DEBUG_STRATEGY_API_ORIGIN = DEFAULT_API_PROXY_TARGET
 
-/** Same-origin /v3 path — proxied to api.aptdemo.atoms.trade in dev/Vercel */
-const V3_API_BASE = import.meta.env.VITE_HEALTH_V3_API_BASE?.trim() ?? ''
+export const STRATEGY_DEBUG_PATH = '/api/v1/health-check/position'
 
-/** Production origin for copy/paste links (Postman, curl, etc.) */
-export const DEBUG_STRATEGY_API_ORIGIN = 'https://api.aptdemo.atoms.trade'
+const API_BASE = import.meta.env.VITE_API_BASE?.trim() ?? ''
 
-export function debugStrategyPath(strategyId: string, sessionId: string): string {
-  const sid = encodeURIComponent(strategyId.trim())
-  const sess = encodeURIComponent(sessionId.trim())
-  return `/v3/strategies/${sid}/${sess}`
+export function debugStrategyPath(strategyId: string): string {
+  const params = new URLSearchParams({ id: strategyId.trim() })
+  return `${STRATEGY_DEBUG_PATH}?${params.toString()}`
 }
 
-export function debugStrategyUrl(strategyId: string, sessionId: string): string {
-  const base = V3_API_BASE.replace(/\/$/, '')
-  const path = debugStrategyPath(strategyId, sessionId)
+export function debugStrategyPathPreview(strategyId: string): string {
+  if (strategyId.trim()) return debugStrategyPath(strategyId)
+  return `${STRATEGY_DEBUG_PATH}?id=:strategyId`
+}
+
+export function debugStrategyUrl(strategyId: string): string {
+  const base = API_BASE.replace(/\/$/, '')
+  const path = debugStrategyPath(strategyId)
   return base ? `${base}${path}` : path
 }
 
-/** Full URL for sharing — always uses the Apt demo API host when proxy base is empty. */
-export function debugStrategyFullUrl(strategyId: string, sessionId: string): string {
-  const base = V3_API_BASE.replace(/\/$/, '') || DEBUG_STRATEGY_API_ORIGIN
-  return `${base}${debugStrategyPath(strategyId, sessionId)}`
+export function debugStrategyFullUrl(strategyId: string): string {
+  return `${DEBUG_STRATEGY_API_ORIGIN}${debugStrategyPath(strategyId)}`
 }
 
 export function formatDebugJson(value: unknown): string {
@@ -64,11 +65,19 @@ export function summarizeDebugResult(result: DebugStrategyResult | null) {
       ? (result.body as Record<string, unknown>)
       : {}
 
-  const hasStrategyData = body.data != null && typeof body.data === 'object'
+  const hasStrategyData =
+    body.brokers != null ||
+    (body.data != null && typeof body.data === 'object')
+
+  const message =
+    body.message ??
+    body.detail ??
+    (body.position_id ? `Lookup for ${body.position_id}` : null) ??
+    (result.ok ? 'Success' : 'Request failed')
 
   return {
     status: result.ok ? 'OK' : `HTTP ${result.status}`,
-    message: String(body.message ?? (result.ok ? 'Success' : 'Request failed')),
+    message: String(message),
     requestId: String(body.requestId ?? '—'),
     hasStrategyData,
   }
@@ -76,28 +85,32 @@ export function summarizeDebugResult(result: DebugStrategyResult | null) {
 
 export function extractStrategyData(body: unknown): unknown | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
-  const data = (body as Record<string, unknown>).data
-  return data != null ? data : null
+  const record = body as Record<string, unknown>
+  if (record.brokers != null) return record.brokers
+  if (record.data != null) return record.data
+  return null
 }
 
 export function isApiErrorBody(body: unknown): boolean {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false
   const record = body as Record<string, unknown>
+  if (typeof record.detail === 'string') return true
+  if (typeof record.error === 'string') return true
   return record.error === true || record.success === false
 }
 
 export async function fetchDebugStrategy(
   strategyId: string,
-  sessionId: string,
   signal?: AbortSignal,
 ): Promise<DebugStrategyResult> {
   const trimmedStrategy = strategyId.trim()
-  const trimmedSession = sessionId.trim()
 
   if (!trimmedStrategy) throw new Error('Strategy ID is required')
-  if (!trimmedSession) throw new Error('Session ID is required')
 
-  const res = await fetch(debugStrategyUrl(trimmedStrategy, trimmedSession), { signal })
+  const res = await fetch(debugStrategyUrl(trimmedStrategy), {
+    headers: { Accept: 'application/json' },
+    signal,
+  })
 
   let body: unknown
   try {
