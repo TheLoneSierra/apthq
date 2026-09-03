@@ -37,6 +37,15 @@ export function debugStrategyAptdemoFullUrl(strategyId: string, sessionId: strin
   return `${DEBUG_STRATEGY_APTDEMO_ORIGIN}${debugStrategyAptdemoPath(strategyId, sessionId)}`
 }
 
+const HEALTH_V3_API_BASE = import.meta.env.VITE_HEALTH_V3_API_BASE?.trim() ?? ''
+
+/** Same-origin path proxied to api.aptdemo.atoms.trade in dev/Vercel. */
+export function debugStrategyAptdemoUrl(strategyId: string, sessionId: string): string {
+  const base = HEALTH_V3_API_BASE.replace(/\/$/, '')
+  const path = debugStrategyAptdemoPath(strategyId, sessionId)
+  return base ? `${base}${path}` : path
+}
+
 export function formatDebugJson(value: unknown): string {
   return JSON.stringify(value, null, 2)
 }
@@ -120,6 +129,32 @@ export async function fetchDebugStrategy(
   if (!trimmedSession) throw new Error('Session UUID is required')
 
   const res = await fetch(debugStrategyUrl(trimmedStrategy, trimmedSession), {
+    headers: { Accept: 'application/json' },
+    signal,
+  })
+
+  let body: unknown
+  try {
+    body = await res.json()
+  } catch {
+    body = { message: res.statusText || 'Non-JSON response' }
+  }
+
+  return { ok: res.ok, status: res.status, body }
+}
+
+export async function fetchDebugStrategyAptdemo(
+  strategyId: string,
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<DebugStrategyResult> {
+  const trimmedStrategy = strategyId.trim()
+  const trimmedSession = sessionId.trim()
+
+  if (!trimmedStrategy) throw new Error('Strategy ID is required')
+  if (!trimmedSession) throw new Error('Session UUID is required')
+
+  const res = await fetch(debugStrategyAptdemoUrl(trimmedStrategy, trimmedSession), {
     headers: { Accept: 'application/json' },
     signal,
   })

@@ -3,6 +3,7 @@ import { DEFAULT_API_PROXY_TARGET } from './constants'
 import {
   DEBUG_STRATEGY_API_ORIGIN,
   debugStrategyAptdemoFullUrl,
+  debugStrategyAptdemoUrl,
   debugStrategyFullUrl,
   debugStrategyPath,
   extractStrategyData,
@@ -31,6 +32,12 @@ describe('debugStrategyApi', () => {
   it('builds full aptdemo URL for copy/paste', () => {
     expect(debugStrategyAptdemoFullUrl('strategy-1', 'session-2')).toBe(
       'https://api.aptdemo.atoms.trade/v3/strategies/strategy-1/session-2',
+    )
+  })
+
+  it('builds same-origin aptdemo fetch path', () => {
+    expect(debugStrategyAptdemoUrl('strategy-1', 'session-2')).toBe(
+      '/v3/strategies/strategy-1/session-2',
     )
   })
 

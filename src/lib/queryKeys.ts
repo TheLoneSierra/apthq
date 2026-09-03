@@ -55,4 +55,5 @@ export const healthV3Keys = {
 
 export const debugStrategyKeys = {
   all: ['debug-strategy'] as const,
+  aptdemo: ['debug-strategy', 'aptdemo'] as const,
 }

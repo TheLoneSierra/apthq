@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useDebugStrategyFetch } from '../../hooks/useDebugStrategyQueries'
+import {
+  useDebugStrategyAptdemoFetch,
+  useDebugStrategyFetch,
+} from '../../hooks/useDebugStrategyQueries'
 import {
   DEBUG_STRATEGY_API_ORIGIN,
   debugStrategyAptdemoFullUrl,
@@ -73,10 +76,14 @@ function CopyableTextRow({
   label,
   value,
   mono = true,
+  onRun,
+  isRunning = false,
 }: {
   label: string
   value: string
   mono?: boolean
+  onRun?: () => void
+  isRunning?: boolean
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -113,6 +120,16 @@ function CopyableTextRow({
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
+        {onRun ? (
+          <button
+            type="button"
+            className="btn-csv shrink-0 px-3"
+            onClick={onRun}
+            disabled={!value.trim() || isRunning}
+          >
+            {isRunning ? 'Running…' : 'Run'}
+          </button>
+        ) : null}
       </div>
     </div>
   )
@@ -123,22 +140,40 @@ export function DebugStrategyPanel() {
   const [sessionId, setSessionId] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [activeSource, setActiveSource] = useState<'lambda' | 'aptdemo' | null>(null)
 
-  const mutation = useDebugStrategyFetch()
+  const lambdaMutation = useDebugStrategyFetch()
+  const aptdemoMutation = useDebugStrategyAptdemoFetch()
+
+  const activeMutation =
+    activeSource === 'aptdemo' ? aptdemoMutation : lambdaMutation
+
+  const validateInputs = (): boolean => {
+    if (!strategyId.trim()) {
+      setInputError('Strategy ID is required.')
+      return false
+    }
+    if (!sessionId.trim()) {
+      setInputError('Session UUID is required.')
+      return false
+    }
+    setInputError(null)
+    return true
+  }
 
   const summary = useMemo(
-    () => summarizeDebugResult(mutation.data ?? null),
-    [mutation.data],
+    () => summarizeDebugResult(activeMutation.data ?? null),
+    [activeMutation.data],
   )
 
   const fieldRows = useMemo(
-    () => flattenTopLevelFields(mutation.data?.body),
-    [mutation.data?.body],
+    () => flattenTopLevelFields(activeMutation.data?.body),
+    [activeMutation.data?.body],
   )
 
   const strategyData = useMemo(
-    () => extractStrategyData(mutation.data?.body),
-    [mutation.data?.body],
+    () => extractStrategyData(activeMutation.data?.body),
+    [activeMutation.data?.body],
   )
 
   const strategyFieldRows = useMemo(
@@ -147,27 +182,32 @@ export function DebugStrategyPanel() {
   )
 
   const isErrorResponse =
-    mutation.data != null &&
-    (!mutation.data.ok || isApiErrorBody(mutation.data.body))
+    activeMutation.data != null &&
+    (!activeMutation.data.ok || isApiErrorBody(activeMutation.data.body))
 
   const toggleRow = (key: string) => {
     setExpanded((e) => ({ ...e, [key]: !e[key] }))
   }
 
   const runDebug = () => {
-    if (!strategyId.trim()) {
-      setInputError('Strategy ID is required.')
-      return
-    }
-    if (!sessionId.trim()) {
-      setInputError('Session UUID is required.')
-      return
-    }
-    setInputError(null)
-    mutation.mutate({ strategyId, sessionId })
+    if (!validateInputs()) return
+    setActiveSource('lambda')
+    lambdaMutation.mutate({ strategyId, sessionId })
   }
 
-  const chipCls = mutation.data?.ok ? 'ok' : mutation.data ? 'warn' : 'ok'
+  const runAptdemo = () => {
+    if (!validateInputs()) return
+    setActiveSource('aptdemo')
+    aptdemoMutation.mutate({ strategyId, sessionId })
+  }
+
+  const retryActive = () => {
+    if (activeSource === 'aptdemo') runAptdemo()
+    else runDebug()
+  }
+
+  const chipCls = activeMutation.data?.ok ? 'ok' : activeMutation.data ? 'warn' : 'ok'
+  const isFetching = lambdaMutation.isPending || aptdemoMutation.isPending
 
   const apiFullUrl =
     strategyId.trim() && sessionId.trim()
@@ -232,16 +272,21 @@ export function DebugStrategyPanel() {
             <CopyableTextRow label="Full URL (Lambda)" value={apiFullUrl} />
           ) : null}
           {aptdemoFullUrl ? (
-            <CopyableTextRow label="Full URL (aptdemo)" value={aptdemoFullUrl} />
+            <CopyableTextRow
+              label="Full URL (aptdemo)"
+              value={aptdemoFullUrl}
+              onRun={runAptdemo}
+              isRunning={aptdemoMutation.isPending}
+            />
           ) : null}
           <div className="flex justify-end pt-1">
             <button
               type="button"
               className="btn-csv w-full justify-center sm:w-auto"
-              disabled={mutation.isPending}
+              disabled={isFetching}
               onClick={runDebug}
             >
-              {mutation.isPending ? 'Fetching…' : 'Debug Strategy'}
+              {lambdaMutation.isPending ? 'Fetching…' : 'Debug Strategy'}
             </button>
           </div>
         </div>
@@ -259,18 +304,20 @@ export function DebugStrategyPanel() {
         <MetricCard variant="base" label="Request ID" value={summary.requestId} />
       </div>
 
-      {mutation.isError && (
+      {activeMutation.isError && (
         <div className="mb-3">
-          <SectionError message={mutation.error.message} onRetry={runDebug} />
+          <SectionError message={activeMutation.error.message} onRetry={retryActive} />
         </div>
       )}
 
-      {mutation.data && (
+      {activeMutation.data && (
         <>
           {isErrorResponse && (
             <div className="mb-3 rounded-[var(--rlg)] border border-[var(--amber)]/40 bg-[rgba(245,158,11,0.08)] p-3 text-xs leading-relaxed text-[var(--text2)]">
-              <strong className="text-[var(--amber)]">Lookup returned errors.</strong> The Lambda
-              API responded — expand broker rows below for per-broker details.
+              <strong className="text-[var(--amber)]">Lookup returned errors.</strong>{' '}
+              {activeSource === 'aptdemo'
+                ? 'The aptdemo API responded — expand rows below for details.'
+                : 'The Lambda API responded — expand broker rows below for per-broker details.'}
             </div>
           )}
 
@@ -279,8 +326,13 @@ export function DebugStrategyPanel() {
               Result
             </span>
             <span className={`hc-chip ${chipCls}`}>
-              {mutation.data.ok ? 'SUCCESS' : `HTTP ${mutation.data.status}`}
+              {activeMutation.data.ok ? 'SUCCESS' : `HTTP ${activeMutation.data.status}`}
             </span>
+            {activeSource === 'aptdemo' ? (
+              <span className="hc-chip ok">aptdemo</span>
+            ) : (
+              <span className="hc-chip ok">Lambda</span>
+            )}
             {summary.hasStrategyData && (
               <span className="hc-chip ok">Broker data present</span>
             )}
@@ -351,17 +403,16 @@ export function DebugStrategyPanel() {
               Full JSON response
             </div>
             <pre className="m-0 max-h-[520px] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--border2)] bg-[var(--s2)] p-3 font-mono-dm text-[11px] leading-snug text-[var(--text2)]">
-              {formatDebugJson(mutation.data.body)}
+              {formatDebugJson(activeMutation.data.body)}
             </pre>
           </div>
         </>
       )}
 
-      {!mutation.data && !mutation.isPending && !mutation.isError && (
+      {!activeMutation.data && !isFetching && !activeMutation.isError && (
         <div className="rounded-[var(--rlg)] border border-dashed border-[var(--border2)] bg-[var(--s1)] p-8 text-center text-xs text-[var(--text3)]">
-          Enter Strategy ID and Session UUID, then click Debug Strategy. Requests go to the Lambda
-          Apt HQ API via{' '}
-          <span className="font-mono-dm">/api/v3/strategies/&#123;strategyId&#125;/&#123;sessionId&#125;</span>.
+          Enter Strategy ID and Session UUID, then click <strong>Run</strong> on the aptdemo URL or{' '}
+          <strong>Debug Strategy</strong> for Lambda.
         </div>
       )}
     </section>
