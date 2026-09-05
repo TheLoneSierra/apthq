@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -18,22 +18,14 @@ function parseSessionTokenFromSetCookie(
 }
 
 /** Browser fetch cannot set Cookie — Vite proxy converts Authorization session UUID → Cookie for aptdemo. */
-function aptdemoAggregateProxy(target: string) {
+function aptdemoAggregateProxy(target: string): ProxyOptions {
   const SESSION_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
   return {
     target,
     changeOrigin: true,
-    configure: (proxy: {
-      on: (
-        event: 'proxyReq',
-        listener: (
-          proxyReq: { setHeader: (k: string, v: string) => void; removeHeader: (k: string) => void },
-          req: { headers: { authorization?: string } },
-        ) => void,
-      ) => void
-    }) => {
+    configure: (proxy) => {
       proxy.on('proxyReq', (proxyReq, req) => {
         const auth = req.headers.authorization?.trim()
         if (auth && SESSION_RE.test(auth)) {
@@ -46,25 +38,12 @@ function aptdemoAggregateProxy(target: string) {
 }
 
 /** Browser fetch cannot read Set-Cookie — inject session_token into login JSON body. */
-function aptdemoLoginProxy(target: string) {
+function aptdemoLoginProxy(target: string): ProxyOptions {
   return {
     target,
     changeOrigin: true,
     selfHandleResponse: true,
-    configure: (proxy: {
-      on: (
-        event: 'proxyRes',
-        listener: (
-          proxyRes: {
-            statusCode?: number
-            headers: Record<string, string | string[] | undefined>
-            on: (event: 'data' | 'end', listener: (chunk?: Buffer) => void) => void
-          },
-          req: { method?: string; url?: string },
-          res: { writeHead: (code: number, headers: Record<string, unknown>) => void; end: (body: string) => void },
-        ) => void,
-      ) => void
-    }) => {
+    configure: (proxy) => {
       proxy.on('proxyRes', (proxyRes, req, res) => {
         const chunks: Buffer[] = []
         proxyRes.on('data', (chunk?: Buffer) => {
