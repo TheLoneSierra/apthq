@@ -18,6 +18,10 @@ export function healthV3Url(): string {
   return base ? `${base}${HEALTH_V3_POSITION_SERVICE_PATH}` : HEALTH_V3_POSITION_SERVICE_PATH
 }
 
+export function healthV3FullUrl(): string {
+  return `${HEALTH_V3_DEFAULT_ORIGIN}${HEALTH_V3_POSITION_SERVICE_PATH}`
+}
+
 export const HEALTH_V3_SECTION_LABELS: Record<string, string> = {
   positions: 'Positions',
   strategies: 'Strategies',

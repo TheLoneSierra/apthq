@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseHealthV3Response, summarizeSection } from './healthCheckV3'
+import { healthV3FullUrl, parseHealthV3Response, summarizeSection } from './healthCheckV3'
 import type { HealthV3Response } from '../types/healthCheckV3'
 
 const sampleResponse: HealthV3Response = {
@@ -26,6 +26,12 @@ const sampleResponse: HealthV3Response = {
 }
 
 describe('healthCheckV3', () => {
+  it('builds full aptdemo URL for copy/paste', () => {
+    expect(healthV3FullUrl()).toBe(
+      'https://api.aptdemo.atoms.trade/v3/healthCheck/position-service',
+    )
+  })
+
   it('parses sections into rows with stats', () => {
     const stats = parseHealthV3Response(sampleResponse)
     expect(stats.total).toBe(2)

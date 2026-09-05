@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useDashboard } from '../../context/DashboardContext'
 import { useHealthCheckV3Position } from '../../hooks/useHealthCheckV3Queries'
-import { HEALTH_V3_POSITION_SERVICE_PATH } from '../../lib/healthCheckV3'
+import { HEALTH_V3_POSITION_SERVICE_PATH, healthV3FullUrl } from '../../lib/healthCheckV3'
 import type { HealthV3Row } from '../../types/healthCheckV3'
+import { CopyableTextRow } from '../ui/CopyableTextRow'
 import { SectionError } from '../ui/SectionState'
 import { Badge, MetricCard, SectionHeader } from '../ui/Shared'
 
@@ -157,6 +158,15 @@ export function HealthCheckV3Panel() {
         Reads the v3 position-service health check from{' '}
         <span className="font-mono-dm">{HEALTH_V3_POSITION_SERVICE_PATH}</span>.
         Expand any section row to view full details and error messages.
+      </div>
+
+      <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
+        <CopyableTextRow
+          label="Full URL (aptdemo)"
+          value={healthV3FullUrl()}
+          onRun={() => void runCheck()}
+          isRunning={query.isFetching}
+        />
       </div>
 
       <div className="grid-kpi-3 mb-3">
