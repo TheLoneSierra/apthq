@@ -4,6 +4,7 @@ import { formatRangeLabel, parseTypedRange } from '../../lib/dates'
 import { useTheme } from '../../hooks/useTheme'
 import type { PeriodPreset } from '../../types/dashboard'
 import { LiveDot } from '../ui/Shared'
+import { BrokerSelect } from '../ui/BrokerSelect'
 
 const PRESETS: { id: PeriodPreset; label: string }[] = [
   { id: '7d', label: '7 days' },
@@ -112,24 +113,12 @@ export function TopNav() {
         Apt HQ
       </div>
       <div className="hidden h-5 w-px bg-[var(--border2)] sm:block" />
-      <div className="flex h-[34px] min-w-0 max-w-[140px] items-center gap-2 rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2 sm:max-w-none sm:px-3">
-        <div
-          className="h-[7px] w-[7px] rounded-full transition-colors duration-300"
-          style={{ background: brokerColor }}
-        />
-        <select
-          value={broker}
-          onChange={(e) => setBroker(e.target.value)}
-          className="w-full min-w-0 cursor-pointer border-none bg-transparent text-[12px] font-medium text-[var(--text)] outline-none sm:text-[13px]"
-          style={{ fontFamily: "'DM Sans', sans-serif" }}
-        >
-          {brokerOptions.map((o) => (
-            <option key={o.value} value={o.value} className="bg-[var(--s2)] text-[var(--text)]">
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <BrokerSelect
+        value={broker}
+        options={brokerOptions}
+        onChange={setBroker}
+        brokerColor={brokerColor}
+      />
       <div className="ml-auto flex items-center gap-2.5">
         <button
           type="button"

@@ -4,12 +4,16 @@ export function CopyableTextRow({
   label,
   value,
   mono = true,
+  editable = false,
+  onChange,
   onRun,
   isRunning = false,
 }: {
   label: string
   value: string
   mono?: boolean
+  editable?: boolean
+  onChange?: (value: string) => void
   onRun?: () => void
   isRunning?: boolean
 }) {
@@ -33,8 +37,9 @@ export function CopyableTextRow({
       <div className="flex gap-2">
         <input
           type="text"
-          readOnly
+          readOnly={!editable}
           value={value}
+          onChange={editable && onChange ? (e) => onChange(e.target.value) : undefined}
           onFocus={(e) => e.currentTarget.select()}
           onClick={(e) => e.currentTarget.select()}
           aria-label={label}

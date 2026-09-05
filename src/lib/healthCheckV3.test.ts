@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { healthV3FullUrl, parseHealthV3Response, summarizeSection } from './healthCheckV3'
+import {
+  healthV3AptdemoPath,
+  healthV3FullUrl,
+  parseHealthV3BrokerAggregate,
+  parseHealthV3FetchResult,
+  parseHealthV3Response,
+  resolveHealthV3Brokers,
+  resolveHealthV3FetchUrl,
+  summarizeSection,
+} from './healthCheckV3'
 import type { HealthV3Response } from '../types/healthCheckV3'
 
 const sampleResponse: HealthV3Response = {
@@ -26,10 +35,33 @@ const sampleResponse: HealthV3Response = {
 }
 
 describe('healthCheckV3', () => {
-  it('builds full aptdemo URL for copy/paste', () => {
-    expect(healthV3FullUrl()).toBe(
-      'https://api.aptdemo.atoms.trade/v3/healthCheck/position-service',
+  it('builds aptdemo path without broker for all', () => {
+    expect(healthV3AptdemoPath('all')).toBe('/v3/healthCheck/position-service')
+  })
+
+  it('builds aptdemo path with broker query param', () => {
+    expect(healthV3AptdemoPath('bajaj')).toBe(
+      '/v3/healthCheck/position-service?broker=bajaj',
     )
+  })
+
+  it('builds full aptdemo URL for copy/paste', () => {
+    expect(healthV3FullUrl('bajaj')).toBe(
+      'https://api.aptdemo.atoms.trade/v3/healthCheck/position-service?broker=bajaj',
+    )
+  })
+
+  it('resolves absolute aptdemo URL to same-origin path', () => {
+    expect(
+      resolveHealthV3FetchUrl(
+        'https://api.aptdemo.atoms.trade/v3/healthCheck/position-service?broker=bajaj',
+      ),
+    ).toBe('/v3/healthCheck/position-service?broker=bajaj')
+  })
+
+  it('resolves broker fan-out list', () => {
+    expect(resolveHealthV3Brokers('all', ['all', 'bajaj', 'smc'])).toEqual(['bajaj', 'smc'])
+    expect(resolveHealthV3Brokers('bajaj', ['all', 'bajaj', 'smc'])).toEqual(['bajaj'])
   })
 
   it('parses sections into rows with stats', () => {
@@ -39,6 +71,35 @@ describe('healthCheckV3', () => {
     expect(stats.issues).toBe(1)
     expect(stats.rows[0].label).toBe('Positions')
     expect(stats.rows[1].chipLabel).toBe('NOT OK')
+  })
+
+  it('parses multi-broker aggregate response', () => {
+    const aggregate = parseHealthV3BrokerAggregate({
+      total: 2,
+      brokers: {
+        bajaj: sampleResponse,
+        smc: { error: 'upstream failed', status_code: 502 },
+      },
+    })
+    expect(aggregate.total).toBe(2)
+    expect(aggregate.ok).toBe(0)
+    expect(aggregate.issues).toBe(2)
+    expect(aggregate.brokerRows[0].label).toBe('Bajaj Broking')
+  })
+
+  it('returns broker mode for all-brokers fetch result', () => {
+    const view = parseHealthV3FetchResult('all', {
+      total: 1,
+      brokers: { bajaj: sampleResponse },
+    })
+    expect(view.mode).toBe('brokers')
+    expect(view.brokerRows).toHaveLength(1)
+  })
+
+  it('returns section mode for single-broker fetch result', () => {
+    const view = parseHealthV3FetchResult('bajaj', sampleResponse)
+    expect(view.mode).toBe('sections')
+    expect(view.rows).toHaveLength(2)
   })
 
   it('summarizes section details', () => {

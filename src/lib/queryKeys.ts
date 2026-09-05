@@ -50,7 +50,8 @@ export const brandConfigKeys = {
 
 export const healthV3Keys = {
   all: ['health-check-v3'] as const,
-  positionService: () => [...healthV3Keys.all, 'position-service'] as const,
+  positionService: (broker: string, brokerScope: string, fetchUrl: string) =>
+    [...healthV3Keys.all, 'position-service', broker, brokerScope, fetchUrl] as const,
 }
 
 export const debugStrategyKeys = {
