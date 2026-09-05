@@ -13,6 +13,8 @@ export const BROKER_NAMES: Record<BrokerKey, string> = {
   navia: 'Navia',
   bajaj: 'Bajaj Broking',
   bajaj_trial: 'Bajaj Broking',
+  tradesbull: 'Tradesbull',
+  moneysukh: 'Moneysukh',
 }
 
 export const BROKER_COLORS: Record<BrokerKey, string> = {
@@ -22,6 +24,8 @@ export const BROKER_COLORS: Record<BrokerKey, string> = {
   navia: '#f59e0b',
   bajaj: '#ef4444',
   bajaj_trial: '#ef4444',
+  tradesbull: '#10b981',
+  moneysukh: '#06b6d4',
 }
 
 export const TOKENS: TokenRow[] = [

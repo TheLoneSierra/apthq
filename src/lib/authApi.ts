@@ -1,6 +1,12 @@
 import { API_BASE } from './constants'
 import { userLoginUrl } from './endpoints'
+import {
+  extractBrandConfigToken,
+  parseSessionTokenFromSetCookie,
+} from './brandConfigAuth'
 import type { LoginResponse } from '../types/auth'
+
+export { extractBrandConfigToken, parseSessionTokenFromSetCookie } from './brandConfigAuth'
 
 /**
  * Extracts access token from various API response shapes:
@@ -29,6 +35,11 @@ export function extractTokenFromLogin(res: LoginResponse): string | null {
   return null
 }
 
+export interface LoginResult {
+  body: LoginResponse
+  sessionToken: string | null
+}
+
 async function parseLoginError(res: Response): Promise<string> {
   try {
     const body = (await res.json()) as { message?: string; error?: string; detail?: string }
@@ -49,7 +60,7 @@ export async function loginUser(
   userId: string,
   from?: string,
   signal?: AbortSignal,
-): Promise<LoginResponse> {
+): Promise<LoginResult> {
   const trimmed = userId.trim()
   if (!trimmed) {
     throw new Error('User ID is required for login')
@@ -71,5 +82,10 @@ export async function loginUser(
     throw new Error(await parseLoginError(res))
   }
 
-  return res.json() as Promise<LoginResponse>
+  const body = (await res.json()) as LoginResponse
+  const sessionToken =
+    parseSessionTokenFromSetCookie(res.headers.get('set-cookie') ?? undefined) ??
+    extractBrandConfigToken(body)
+
+  return { body, sessionToken }
 }

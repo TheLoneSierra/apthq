@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { BrokerKey } from '../types/dashboard'
+import { resolveHealthV3Brokers } from '../lib/aptdemoBrokers'
 import {
   fetchHealthCheckV3AtUrl,
   fetchHealthCheckV3PositionService,
@@ -9,10 +10,9 @@ import { healthV3Keys } from '../lib/queryKeys'
 export function useHealthCheckV3Position(
   enabled: boolean,
   broker: BrokerKey,
-  availableBrokers: BrokerKey[],
   fetchUrl?: string,
 ) {
-  const brokerScope = availableBrokers.filter((b) => b !== 'all').join(',')
+  const brokerScope = resolveHealthV3Brokers(broker).join(',')
 
   return useQuery({
     queryKey: healthV3Keys.positionService(broker, brokerScope, fetchUrl ?? ''),
@@ -21,7 +21,7 @@ export function useHealthCheckV3Position(
       if (trimmedUrl && broker !== 'all') {
         return fetchHealthCheckV3AtUrl(trimmedUrl, broker, signal)
       }
-      return fetchHealthCheckV3PositionService(broker, availableBrokers, signal)
+      return fetchHealthCheckV3PositionService(broker, [], signal)
     },
     enabled,
     retry: 1,

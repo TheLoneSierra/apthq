@@ -1,5 +1,6 @@
 import { API_BASE } from './constants'
 import { API_ROUTES } from './endpoints'
+import { brandConfigAuthHeaders } from './brandConfigAuth'
 import type {
   BrandConfigEnvelope,
   BrandConfigObject,
@@ -8,26 +9,23 @@ import type {
 } from '../types/brandConfig'
 
 const TOKEN_STORAGE_KEY = 'apthq-brand-config-token'
+export const BRAND_CONFIG_TOKEN_CHANGED = 'apthq-brand-config-token-changed'
 
 export function getBrandConfigToken(): string {
-  return (
-    localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ||
-    import.meta.env.VITE_BRAND_CONFIG_TOKEN?.trim() ||
-    ''
-  )
+  return localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ?? ''
 }
 
 export function setBrandConfigToken(token: string): void {
   const trimmed = token.trim()
   if (trimmed) localStorage.setItem(TOKEN_STORAGE_KEY, trimmed)
   else localStorage.removeItem(TOKEN_STORAGE_KEY)
+  window.dispatchEvent(
+    new CustomEvent(BRAND_CONFIG_TOKEN_CHANGED, { detail: trimmed }),
+  )
 }
 
 function authHeaders(token: string): HeadersInit {
-  return {
-    Authorization: token,
-    Accept: 'application/json',
-  }
+  return brandConfigAuthHeaders(token)
 }
 
 async function parseBrandConfigError(res: Response): Promise<string> {

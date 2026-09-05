@@ -60,8 +60,8 @@ describe('healthCheckV3', () => {
   })
 
   it('resolves broker fan-out list', () => {
-    expect(resolveHealthV3Brokers('all', ['all', 'bajaj', 'smc'])).toEqual(['bajaj', 'smc'])
-    expect(resolveHealthV3Brokers('bajaj', ['all', 'bajaj', 'smc'])).toEqual(['bajaj'])
+    expect(resolveHealthV3Brokers('all')).toHaveLength(6)
+    expect(resolveHealthV3Brokers('bajaj')).toEqual(['bajaj'])
   })
 
   it('parses sections into rows with stats', () => {

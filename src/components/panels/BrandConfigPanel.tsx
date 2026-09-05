@@ -8,12 +8,17 @@ import {
 } from '../../hooks/useBrandConfigQueries'
 import { extractTokenFromLogin, loginUser } from '../../lib/authApi'
 import {
+  extractBrandConfigToken,
+  normalizeSessionTokenInput,
+} from '../../lib/brandConfigAuth'
+import {
   formatBrandConfigJson,
   getBrandConfigToken,
   parseAllConfigsJson,
   parseBrandConfigJson,
   setBrandConfigToken,
 } from '../../lib/brandConfigApi'
+import { useBrandConfigToken } from '../../hooks/useBrandConfigToken'
 import { DynamicKeyValueEditor } from '../brandConfig/DynamicKeyValueEditor'
 import { MultiBrokerConfigEditor } from '../brandConfig/MultiBrokerConfigEditor'
 import type { BrokerBrandConfig } from '../../types/brandConfig'
@@ -172,7 +177,8 @@ export function BrandConfigPanel() {
   const tabActive = activeTab === 'brandconfig'
 
   const [tokenInput, setTokenInput] = useState(getBrandConfigToken())
-  const [token, setToken] = useState(getBrandConfigToken())
+  const token = useBrandConfigToken()
+  const [tokenSaveMessage, setTokenSaveMessage] = useState<string | null>(null)
   const [loginUserId, setLoginUserId] = useState('69cf7bc6bba75822177c84ef')
   const [loginFrom, setLoginFrom] = useState('main')
   const [isLoggingIn, setIsLoggingIn] = useState(false)
@@ -233,9 +239,19 @@ export function BrandConfigPanel() {
   }, [allQuery.data, allQuery.isSuccess, allQuery.isFetching])
 
   const saveToken = () => {
-    setBrandConfigToken(tokenInput)
-    setToken(tokenInput.trim())
+    const trimmed = normalizeSessionTokenInput(tokenInput)
+    if (!trimmed) {
+      setTokenSaveMessage(null)
+      setBrandConfigToken('')
+      setLoginSuccess(null)
+      setLoginError(null)
+      return
+    }
+    setBrandConfigToken(trimmed)
+    setTokenInput(trimmed)
+    setTokenSaveMessage('Token saved in this browser (localStorage).')
     setLoginSuccess(null)
+    setLoginError(null)
   }
 
   const handleLogin = async (e?: React.FormEvent) => {
@@ -251,12 +267,13 @@ export function BrandConfigPanel() {
     setLoginSuccess(null)
 
     try {
-      const res = await loginUser(trimmedId, loginFrom?.trim() || undefined)
-      const tokenFound = extractTokenFromLogin(res)
+      const { body, sessionToken } = await loginUser(trimmedId, loginFrom?.trim() || undefined)
+      const tokenFound =
+        extractBrandConfigToken(body, sessionToken) ?? extractTokenFromLogin(body)
       if (tokenFound) {
         setTokenInput(tokenFound)
         setBrandConfigToken(tokenFound)
-        setToken(tokenFound)
+        setTokenSaveMessage('Token saved in this browser (localStorage).')
         setLoginSuccess(`Logged in successfully as ${trimmedId}! Token automatically applied.`)
         setSummary({
           endpoint: 'POST /v2/users/login',
@@ -264,7 +281,9 @@ export function BrandConfigPanel() {
           status: 'Authenticated',
         })
       } else {
-        setLoginError('Login succeeded but no access token was returned in response.')
+        setLoginError(
+          'Login succeeded but no session_token was returned. Paste session_token from aptdemo site cookies (DevTools → Application → Cookies → session_token).',
+        )
       }
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Login failed')
@@ -356,10 +375,15 @@ export function BrandConfigPanel() {
       />
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border2)] bg-[var(--s1)] p-3 text-xs leading-relaxed text-[var(--text2)]">
-        Manage per-broker brand configuration via{' '}
-        <span className="font-mono-dm">/v2/aggregate</span>. All routes require{' '}
-        <span className="font-mono-dm">Authorization: &lt;access_token&gt;</span>.
-        PATCH replaces the stored config object — omitted keys are deleted.
+        Manage per-broker <strong>theme &amp; branding</strong> (colors, typography, keys) via{' '}
+        <span className="font-mono-dm">/v2/aggregate</span>. Fetch and edit configs per broker,
+        or patch all brokers at once. On the deployed app, login with any User ID and click Fetch —
+        no aptdemo cookie needed.
+      </div>
+
+      <div className="mb-3 rounded-[var(--rlg)] border border-[var(--amber)]/40 bg-[rgba(245,158,11,0.08)] p-3 text-xs leading-relaxed text-[var(--text2)]">
+        <strong>Health Check v3 is separate</strong> — it does not use this tab. For broker health,
+        go to <strong>Health Check v3</strong> → All Brokers → Run (no token required).
       </div>
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
@@ -406,13 +430,13 @@ export function BrandConfigPanel() {
         </div>
 
         <div className="border-t border-[var(--border2)] pt-3">
-          <SubLabel>2. Active Access Token (Authorization: &lt;access_token&gt;)</SubLabel>
+          <SubLabel>2. Access token (Authorization header)</SubLabel>
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="password"
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
-              placeholder="Paste or edit access token"
+              placeholder="Paste or edit access token (auto-filled after login)"
               className="h-8 w-full rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-2.5 font-mono-dm text-xs text-[var(--text)] outline-none sm:flex-1"
               autoComplete="off"
             />
@@ -423,8 +447,13 @@ export function BrandConfigPanel() {
           <p className="mt-2 text-[11px] text-[var(--text3)]">
             {tokenReady
               ? 'Token active — requests to /v2/aggregate/... will include Authorization header.'
-              : 'No token set. Login above, paste a token here, or set VITE_BRAND_CONFIG_TOKEN in .env.'}
+              : 'Login above or paste a token, then Save token.'}
           </p>
+          {tokenSaveMessage ? (
+            <p className="mt-1.5 text-[11px] text-[var(--green)]" role="status">
+              ✓ {tokenSaveMessage}
+            </p>
+          ) : null}
         </div>
       </div>
 

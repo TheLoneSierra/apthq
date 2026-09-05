@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useDashboard } from '../../context/DashboardContext'
 import { useHealthCheckV3Position } from '../../hooks/useHealthCheckV3Queries'
+import { HEALTH_V3_ALL_BROKERS, resolveHealthV3Brokers } from '../../lib/aptdemoBrokers'
 import {
   HEALTH_V3_POSITION_SERVICE_PATH,
   healthV3FullUrl,
-  resolveHealthV3Brokers,
 } from '../../lib/healthCheckV3'
 import type { HealthV3BrokerRow, HealthV3Row } from '../../types/healthCheckV3'
 import { CopyableTextRow } from '../ui/CopyableTextRow'
@@ -227,12 +227,11 @@ function BrokerTable({
 }
 
 export function HealthCheckV3Panel() {
-  const { activeTab, broker, brokerLabel, brokerOptions } = useDashboard()
+  const { activeTab, broker, brokerLabel } = useDashboard()
   const tabActive = activeTab === 'healthcheckv3'
 
-  const availableBrokers = brokerOptions.map((o) => o.value)
   const [urlInput, setUrlInput] = useState(() => healthV3FullUrl(broker))
-  const query = useHealthCheckV3Position(tabActive, broker, availableBrokers, urlInput)
+  const query = useHealthCheckV3Position(tabActive, broker, urlInput)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [sectionExpanded, setSectionExpanded] = useState<Record<string, boolean>>({})
   const [summary, setSummary] = useState({
@@ -280,7 +279,7 @@ export function HealthCheckV3Panel() {
         : 'err'
 
   const isBrokerMode = query.data?.mode === 'brokers'
-  const fanOutBrokers = resolveHealthV3Brokers(broker, availableBrokers)
+  const fanOutBrokers = resolveHealthV3Brokers(broker)
 
   return (
     <section>
@@ -293,10 +292,10 @@ export function HealthCheckV3Panel() {
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border2)] bg-[var(--s1)] p-3 text-xs leading-relaxed text-[var(--text2)]">
         Uses the aptdemo API{' '}
-        <span className="font-mono-dm">{HEALTH_V3_POSITION_SERVICE_PATH}</span> with the header
-        broker selector. <strong>All Brokers</strong> fans out to{' '}
-        <span className="font-mono-dm">?broker=&#123;slug&#125;</span> for each broker (
-        {fanOutBrokers.join(', ')}). A single broker uses one request with its slug.
+        <span className="font-mono-dm">{HEALTH_V3_POSITION_SERVICE_PATH}</span>.{' '}
+        <strong>All Brokers</strong> checks{' '}
+        {HEALTH_V3_ALL_BROKERS.length} brokers ({fanOutBrokers.join(', ')}) — no login or token
+        required.
       </div>
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">

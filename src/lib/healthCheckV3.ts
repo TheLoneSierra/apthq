@@ -7,14 +7,16 @@ import type {
   HealthV3Stats,
   HealthV3ViewModel,
 } from '../types/healthCheckV3'
+import { resolveHealthV3Brokers } from './aptdemoBrokers'
 import { BROKER_NAMES } from './constants'
+
+export { resolveHealthV3Brokers, HEALTH_V3_ALL_BROKERS } from './aptdemoBrokers'
 
 export const HEALTH_V3_POSITION_SERVICE_PATH = '/v3/healthCheck/position-service'
 
 export const HEALTH_V3_DEFAULT_ORIGIN = 'https://api.aptdemo.atoms.trade'
 
-/** Fallback when broker list has not loaded from Lambda health yet. */
-export const DEFAULT_HEALTH_V3_BROKERS: BrokerKey[] = ['bajaj', 'smc', 'tradesmart']
+export { DEFAULT_HEALTH_V3_BROKERS } from './aptdemoBrokers'
 
 /** Client path — proxied in dev/Vercel to api.aptdemo.atoms.trade */
 export const HEALTH_V3_API_BASE =
@@ -178,10 +180,13 @@ export function parseHealthV3Response(response: HealthV3Response): HealthV3Stats
   }
 }
 
-export function parseHealthV3BrokerAggregate(response: {
-  brokers?: Record<string, unknown>
-  total?: number
-}): { brokerRows: HealthV3BrokerRow[]; total: number; ok: number; issues: number } {
+export function parseHealthV3BrokerAggregate(
+  response: {
+    brokers?: Record<string, unknown>
+    total?: number
+  },
+  brokerLabels: Record<string, string> = {},
+): { brokerRows: HealthV3BrokerRow[]; total: number; ok: number; issues: number } {
   const entries = response.brokers ? Object.entries(response.brokers) : []
   let ok = 0
   let issues = 0
@@ -194,7 +199,7 @@ export function parseHealthV3BrokerAggregate(response: {
       else issues += 1
       return {
         broker: brokerKey,
-        label: BROKER_NAMES[brokerKey] || brokerKey,
+        label: brokerLabels[brokerKey] ?? BROKER_NAMES[brokerKey] ?? brokerKey,
         stats,
         chipCls: chip.chipCls,
         chipLabel: chip.chipLabel,
@@ -208,7 +213,7 @@ export function parseHealthV3BrokerAggregate(response: {
     )
     return {
       broker: brokerKey,
-      label: BROKER_NAMES[brokerKey] || brokerKey,
+      label: brokerLabels[brokerKey] ?? BROKER_NAMES[brokerKey] ?? brokerKey,
       stats: {
         ...emptyStats(),
         overallMessage: err.message,
@@ -230,6 +235,7 @@ export function parseHealthV3BrokerAggregate(response: {
 export function parseHealthV3FetchResult(
   broker: BrokerKey,
   body: unknown,
+  brokerLabels: Record<string, string> = {},
 ): HealthV3ViewModel {
   if (
     broker === 'all' &&
@@ -240,6 +246,7 @@ export function parseHealthV3FetchResult(
   ) {
     const aggregate = parseHealthV3BrokerAggregate(
       body as { brokers?: Record<string, unknown>; total?: number },
+      brokerLabels,
     )
     return {
       mode: 'brokers',
@@ -335,15 +342,6 @@ async function fetchHealthV3AptdemoBroker(
   return body
 }
 
-export function resolveHealthV3Brokers(
-  broker: BrokerKey,
-  availableBrokers: BrokerKey[],
-): BrokerKey[] {
-  const fromOptions = availableBrokers.filter((b) => b && b !== 'all')
-  const slugs = fromOptions.length ? fromOptions : DEFAULT_HEALTH_V3_BROKERS
-  return broker === 'all' ? slugs : [broker]
-}
-
 export async function fetchHealthCheckV3AtUrl(
   url: string,
   broker: BrokerKey,
@@ -380,11 +378,11 @@ export async function fetchHealthCheckV3AtUrl(
 
 export async function fetchHealthCheckV3PositionService(
   broker: BrokerKey,
-  availableBrokers: BrokerKey[],
+  _availableBrokers: BrokerKey[],
   signal?: AbortSignal,
 ): Promise<HealthV3ViewModel> {
   if (broker === 'all') {
-    const slugs = resolveHealthV3Brokers(broker, availableBrokers)
+    const slugs = resolveHealthV3Brokers('all')
     if (!slugs.length) throw new Error('No brokers available to query.')
 
     const entries = await Promise.all(
