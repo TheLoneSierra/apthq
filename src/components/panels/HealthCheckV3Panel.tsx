@@ -3,6 +3,7 @@ import { useDashboard } from '../../context/DashboardContext'
 import { useHealthCheckV3Position } from '../../hooks/useHealthCheckV3Queries'
 import { HEALTH_V3_ALL_BROKERS, resolveHealthV3Brokers } from '../../lib/aptdemoBrokers'
 import {
+  buildHealthV3ResponsePreview,
   HEALTH_V3_POSITION_SERVICE_PATH,
   healthV3FullUrl,
 } from '../../lib/healthCheckV3'
@@ -234,6 +235,7 @@ export function HealthCheckV3Panel() {
   const query = useHealthCheckV3Position(tabActive, broker, urlInput)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [sectionExpanded, setSectionExpanded] = useState<Record<string, boolean>>({})
+  const [showPreview, setShowPreview] = useState(false)
   const [summary, setSummary] = useState({
     endpoint: '—',
     total: '—',
@@ -257,12 +259,14 @@ export function HealthCheckV3Panel() {
   }
 
   const runCheck = async () => {
+    setShowPreview(true)
     const result = await query.refetch()
     if (result.data) applySummary(result.data)
   }
 
   useEffect(() => {
     setUrlInput(healthV3FullUrl(broker))
+    setShowPreview(false)
   }, [broker])
 
   useEffect(() => {
@@ -308,6 +312,17 @@ export function HealthCheckV3Panel() {
           isRunning={query.isFetching}
         />
       </div>
+
+      {showPreview && query.data && (
+        <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text3)]">
+            API response preview
+          </div>
+          <pre className="m-0 max-h-[240px] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--border2)] bg-[var(--s2)] p-3 font-mono-dm text-[11px] leading-snug text-[var(--text2)]">
+            {JSON.stringify(buildHealthV3ResponsePreview(query.data), null, 2)}
+          </pre>
+        </div>
+      )}
 
       <div className="grid-kpi-3 mb-3">
         <MetricCard variant="base" label="Selected Broker" value={summary.endpoint} />

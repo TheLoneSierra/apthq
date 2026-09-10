@@ -232,6 +232,45 @@ export function parseHealthV3BrokerAggregate(
   }
 }
 
+/** Compact API-shaped JSON for the Health Check v3 preview box (not full section details). */
+export function buildHealthV3ResponsePreview(
+  view: HealthV3ViewModel,
+): Record<string, unknown> {
+  if (view.mode === 'brokers') {
+    return {
+      success: view.apiSuccess,
+      message: view.overallMessage,
+      status: view.overallStatus,
+      total: view.total,
+      brokers: Object.fromEntries(
+        view.brokerRows.map((row) => [
+          row.broker,
+          {
+            status: row.stats.overallStatus,
+            message: row.stats.overallMessage,
+            sections: `${row.stats.ok}/${row.stats.total} ok`,
+          },
+        ]),
+      ),
+    }
+  }
+
+  return {
+    success: view.apiSuccess,
+    message: view.overallMessage,
+    data: {
+      status: view.overallStatus,
+      message: view.overallMessage,
+      sections: Object.fromEntries(
+        view.rows.map((row) => [
+          row.section,
+          { status: row.status, message: row.message },
+        ]),
+      ),
+    },
+  }
+}
+
 export function parseHealthV3FetchResult(
   broker: BrokerKey,
   body: unknown,

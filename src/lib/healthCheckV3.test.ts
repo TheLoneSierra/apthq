@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildHealthV3ResponsePreview,
   healthV3AptdemoPath,
   healthV3FullUrl,
   parseHealthV3BrokerAggregate,
@@ -111,5 +112,41 @@ describe('healthCheckV3', () => {
         errors: ['a', 'b'],
       }),
     ).toContain('dbLength: 2')
+  })
+
+  it('builds compact preview JSON for single broker', () => {
+    const view = parseHealthV3FetchResult('smc', sampleResponse)
+    expect(buildHealthV3ResponsePreview(view)).toEqual({
+      success: false,
+      message: 'Position service is unhealthy',
+      data: {
+        status: 'not_ok',
+        message: 'Position service is unhealthy',
+        sections: {
+          positions: { status: 'ok', message: 'Positions are healthy' },
+          strategies: { status: 'not_ok', message: 'Strategies are unhealthy' },
+        },
+      },
+    })
+  })
+
+  it('builds compact preview JSON for all brokers', () => {
+    const view = parseHealthV3FetchResult('all', {
+      total: 1,
+      brokers: { bajaj: sampleResponse },
+    })
+    expect(buildHealthV3ResponsePreview(view)).toEqual({
+      success: false,
+      message: '0/1 brokers healthy',
+      status: 'not_ok',
+      total: 1,
+      brokers: {
+        bajaj: {
+          status: 'not_ok',
+          message: 'Position service is unhealthy',
+          sections: '1/2 ok',
+        },
+      },
+    })
   })
 })
