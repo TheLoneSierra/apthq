@@ -33,6 +33,11 @@ const DebugStrategyPanel = lazy(() =>
     default: m.DebugStrategyPanel,
   })),
 )
+const HqOpsPanel = lazy(() =>
+  import('./components/panels/HqOpsPanel').then((m) => ({
+    default: m.HqOpsPanel,
+  })),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +84,11 @@ function TabPanel() {
     debugstrategy: (
       <ErrorBoundary label="Debug Strategy">
         <DebugStrategyPanel />
+      </ErrorBoundary>
+    ),
+    hqops: (
+      <ErrorBoundary label="HQ Ops">
+        <HqOpsPanel />
       </ErrorBoundary>
     ),
   }[activeTab]

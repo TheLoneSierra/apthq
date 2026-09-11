@@ -32,6 +32,19 @@ export const healthKeys = {
   ltp: () => [...healthKeys.all, 'ltp-service'] as const,
   indicator: () => [...healthKeys.all, 'indicator-service'] as const,
   position: (id: string) => [...healthKeys.all, 'position', id] as const,
+  orderPlacement: () => [...healthKeys.all, 'order-placement-service'] as const,
+}
+
+export const hqOpsKeys = {
+  all: ['hq-ops'] as const,
+  webhookSignals: (q: {
+    message: string
+    startDatetime: string
+    endDatetime: string
+    includeLogs: boolean
+  }) => [...hqOpsKeys.all, 'webhook-signals', q] as const,
+  orphanDiagnosis: (q: { strategyId: string; includeLogs: boolean }) =>
+    [...hqOpsKeys.all, 'orphan-diagnosis', q] as const,
 }
 
 export type BrandConfigFilters = {

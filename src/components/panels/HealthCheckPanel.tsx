@@ -3,11 +3,13 @@ import { useDashboard } from '../../context/DashboardContext'
 import {
   useHealthCheckIndicator,
   useHealthCheckLtp,
+  useHealthCheckOrderPlacement,
   useHealthCheckPosition,
 } from '../../hooks/useHealthCheckQueries'
 import { HEALTH_CHECK_LABELS } from '../../lib/endpoints'
 import { parseHealthRows } from '../../lib/health'
 import type { HealthRow } from '../../types/dashboard'
+import type { OrderPlacementCard } from '../../types/hqOps'
 import { SectionError } from '../ui/SectionState'
 import { Badge, MetricCard, SectionHeader } from '../ui/Shared'
 
@@ -97,12 +99,117 @@ function HealthTable({
   })
 }
 
+function probeChipClass(probe: { found?: boolean; valid?: boolean } | null): string {
+  if (!probe) return 'muted'
+  if (probe.found && probe.valid) return 'ok'
+  if (probe.found && !probe.valid) return 'warn'
+  return 'err'
+}
+
+function probeChipLabel(
+  name: string,
+  probe: { found?: boolean; valid?: boolean } | null,
+): string {
+  if (!probe) return `${name} —`
+  if (probe.found && probe.valid) return `${name} ✓`
+  if (probe.found) return `${name} invalid`
+  return `${name} missing`
+}
+
+function OrderPlacementCards({
+  cards,
+  loading,
+  error,
+  onRetry,
+}: {
+  cards: OrderPlacementCard[]
+  loading: boolean
+  error: string | null
+  onRetry: () => void
+}) {
+  if (loading) {
+    return (
+      <p className="text-xs text-[var(--text3)]">
+        Running order-placement health check...
+      </p>
+    )
+  }
+  if (error) {
+    return <SectionError message={error} onRetry={onRetry} />
+  }
+  if (!cards.length) {
+    return (
+      <p className="text-xs text-[var(--text3)]">
+        Run order-placement check to view per-broker Redis / token_index status.
+      </p>
+    )
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {cards.map((card) => {
+        const border =
+          card.uiStatus === 'ok'
+            ? 'border-[rgba(34,197,94,0.35)]'
+            : card.uiStatus === 'not_ok'
+              ? 'border-[rgba(239,68,68,0.35)]'
+              : 'border-[var(--border2)]'
+        const chipCls =
+          card.uiStatus === 'ok' ? 'ok' : card.uiStatus === 'not_ok' ? 'err' : 'muted'
+        const chipLabel =
+          card.uiStatus === 'ok'
+            ? 'OK'
+            : card.uiStatus === 'not_ok'
+              ? 'Not OK'
+              : 'Unreachable'
+        return (
+          <div
+            key={card.broker}
+            className={`rounded-[var(--rlg)] border bg-[var(--s2)] p-3.5 ${border}`}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="font-mono-dm text-sm font-semibold text-[var(--text)]">
+                {card.broker}
+              </span>
+              <span className={`hc-chip ${chipCls}`}>{chipLabel}</span>
+            </div>
+            <p className="mb-2.5 text-xs leading-relaxed text-[var(--text2)]">
+              {card.message}
+            </p>
+            {card.uiStatus !== 'unreachable' && (
+              <div className="mb-2.5 flex flex-wrap gap-1.5">
+                <span className={`hc-chip ${probeChipClass(card.probes.cash)}`}>
+                  {probeChipLabel('CASH', card.probes.cash)}
+                </span>
+                <span className={`hc-chip ${probeChipClass(card.probes.fut)}`}>
+                  {probeChipLabel('FUT', card.probes.fut)}
+                </span>
+                <span className={`hc-chip ${probeChipClass(card.probes.opt)}`}>
+                  {probeChipLabel('OPT', card.probes.opt)}
+                </span>
+              </div>
+            )}
+            {card.failures.length > 0 && (
+              <ul className="m-0 list-disc space-y-1 pl-4 text-[11px] text-[var(--red)]">
+                {card.failures.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function HealthCheckPanel() {
   const { activeTab } = useDashboard()
   const tabActive = activeTab === 'healthcheck'
 
   const ltpQuery = useHealthCheckLtp(tabActive)
   const indicatorQuery = useHealthCheckIndicator(tabActive)
+  const orderPlacementQuery = useHealthCheckOrderPlacement(false)
   const positionMutation = useHealthCheckPosition()
 
   const [positionId, setPositionId] = useState('')
@@ -143,6 +250,23 @@ export function HealthCheckPanel() {
       applySummary(HEALTH_CHECK_LABELS.indicator, { total: 0, ok: 0, issues: 0 })
   }
 
+  const runOrderPlacement = async () => {
+    const result = await orderPlacementQuery.refetch()
+    if (result.data) {
+      applySummary(HEALTH_CHECK_LABELS.orderPlacement, {
+        total: result.data.total,
+        ok: result.data.ok,
+        issues: result.data.issues + result.data.unreachable,
+      })
+    } else if (result.error) {
+      applySummary(HEALTH_CHECK_LABELS.orderPlacement, {
+        total: 0,
+        ok: 0,
+        issues: 0,
+      })
+    }
+  }
+
   const runPosition = () => {
     const id = positionId.trim()
     if (!id) {
@@ -180,15 +304,17 @@ export function HealthCheckPanel() {
   return (
     <section>
       <SectionHeader
-        title="Health Check API — LTP, Indicator & Position"
+        title="Health Check API — LTP, Indicator, Position & Order Placement"
         titleColor="var(--purple)"
         badge={<Badge variant="strat">Operations</Badge>}
         lineColor="var(--pur-bd)"
       />
 
       <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border2)] bg-[var(--s1)] p-3 text-xs leading-relaxed text-[var(--text2)]">
-        Operational health-check endpoints for Apt HQ. These routes fan out to all configured broker APIs and return per-broker responses as-is under the{' '}
-        <span className="font-mono-dm">brokers</span> key.
+        Operational health-check endpoints for Apt HQ. These routes fan out to all configured
+        broker APIs and return per-broker responses as-is under the{' '}
+        <span className="font-mono-dm">brokers</span> key. HTTP 200 from HQ does not mean every
+        broker is healthy — walk each broker payload.
       </div>
 
       <div className="grid-kpi-3 mb-3">
@@ -228,7 +354,7 @@ export function HealthCheckPanel() {
         />
       </div>
 
-      <div className="rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
+      <div className="mb-3 rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
         <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex-1 text-xs font-medium text-[var(--text2)]">
             Position Lookup (Across All Brokers)
@@ -294,6 +420,32 @@ export function HealthCheckPanel() {
             </table>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-[var(--rlg)] border border-[var(--border)] bg-[var(--s1)] p-[18px]">
+        <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex-1 text-xs font-medium text-[var(--text2)]">
+            Order-Placement Service Health (Redis + token_index probes)
+          </div>
+          <button
+            type="button"
+            className="btn-csv w-full justify-center sm:w-auto"
+            disabled={orderPlacementQuery.isFetching}
+            onClick={() => void runOrderPlacement()}
+          >
+            Run Order-Placement Check
+          </button>
+        </div>
+        <OrderPlacementCards
+          cards={orderPlacementQuery.data?.cards ?? []}
+          loading={orderPlacementQuery.isFetching}
+          error={
+            orderPlacementQuery.isError && orderPlacementQuery.isFetched
+              ? orderPlacementQuery.error.message
+              : null
+          }
+          onRetry={() => void runOrderPlacement()}
+        />
       </div>
     </section>
   )

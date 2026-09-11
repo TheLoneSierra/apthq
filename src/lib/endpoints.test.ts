@@ -20,7 +20,16 @@ describe('endpoints', () => {
     expect(healthCheckPath('ltp')).toBe('/api/v1/health-check/ltp-service')
     expect(healthCheckPath('indicator')).toBe('/api/v1/health-check/indicator-service')
     expect(healthCheckPath('position')).toBe('/api/v1/health-check/position')
+    expect(healthCheckPath('orderPlacement')).toBe(
+      '/api/v1/health-check/order-placement-service',
+    )
     expect(HEALTH_CHECK_LABELS.ltp).toBe('LTP Service')
+    expect(HEALTH_CHECK_LABELS.orderPlacement).toBe('Order Placement Service')
+  })
+
+  it('defines HQ ops routes', () => {
+    expect(API_ROUTES.webhookSignals).toBe('/api/v1/webhook-signals')
+    expect(API_ROUTES.orphanDiagnosis).toBe('/api/v1/orphan-diagnosis')
   })
 
   it('defines brand config routes', () => {

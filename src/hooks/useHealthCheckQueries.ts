@@ -4,6 +4,8 @@ import {
   fetchHealthCheckLtp,
   fetchHealthCheckPosition,
 } from '../lib/api'
+import { fetchOrderPlacementHealth } from '../lib/hqOpsApi'
+import { parseOrderPlacementCards } from '../lib/hqOps'
 import { parseHealthRows } from '../lib/health'
 import { healthKeys } from '../lib/queryKeys'
 
@@ -32,5 +34,16 @@ export function useHealthCheckIndicator(enabled: boolean) {
 export function useHealthCheckPosition() {
   return useMutation({
     mutationFn: (positionId: string) => fetchHealthCheckPosition(positionId),
+  })
+}
+
+export function useHealthCheckOrderPlacement(enabled: boolean) {
+  return useQuery({
+    queryKey: healthKeys.orderPlacement(),
+    queryFn: ({ signal }) => fetchOrderPlacementHealth(signal),
+    enabled,
+    retry: 1,
+    staleTime: 60_000,
+    select: (data) => parseOrderPlacementCards(data),
   })
 }

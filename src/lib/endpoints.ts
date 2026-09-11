@@ -16,7 +16,11 @@ export const API_ROUTES = {
     ltp: '/api/v1/health-check/ltp-service',
     indicator: '/api/v1/health-check/indicator-service',
     position: '/api/v1/health-check/position',
+    orderPlacement: '/api/v1/health-check/order-placement-service',
   },
+
+  webhookSignals: '/api/v1/webhook-signals',
+  orphanDiagnosis: '/api/v1/orphan-diagnosis',
 
   /** Brand Config API — requires Authorization header on all routes */
   brandConfig: {
@@ -36,6 +40,7 @@ export const HEALTH_CHECK_LABELS: Record<HealthCheckKind, string> = {
   ltp: 'LTP Service',
   indicator: 'Indicator Service',
   position: 'Position Lookup',
+  orderPlacement: 'Order Placement Service',
 }
 
 /** Query params shared by all analytics endpoints */

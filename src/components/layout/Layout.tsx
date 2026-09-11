@@ -210,6 +210,7 @@ export function SubTabs() {
     { id: 'brandconfig', label: 'Brand Config' },
     { id: 'healthcheckv3', label: 'Health Check v3' },
     { id: 'debugstrategy', label: 'Debug Strategy' },
+    { id: 'hqops', label: 'HQ Ops' },
   ]
 
   const onKeyDown = (e: ReactKeyboardEvent, index: number) => {
