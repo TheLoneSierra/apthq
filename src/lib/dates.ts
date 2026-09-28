@@ -24,6 +24,21 @@ export function formatRangeLabel(range: DateRange): string {
   return `${range.start} → ${range.end}`
 }
 
+/** Local calendar date → YYYY-MM-DD (avoids UTC shift from toISOString). */
+export function toIsoDateLocal(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Parse YYYY-MM-DD as a local Date at midnight. */
+export function parseLocalDate(value: string): Date {
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return new Date(NaN)
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
 export function parseTypedRange(value: string): DateRange | null {
   const trimmed = value.trim()
   if (!trimmed) return null

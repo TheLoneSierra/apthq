@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useDashboard } from '../../context/DashboardContext'
-import { formatRangeLabel, parseTypedRange } from '../../lib/dates'
 import { useTheme } from '../../hooks/useTheme'
 import type { PeriodPreset } from '../../types/dashboard'
 import { LiveDot } from '../ui/Shared'
 import { BrokerSelect } from '../ui/BrokerSelect'
+import { DateRangePicker } from '../ui/DateRangePicker'
 
 const PRESETS: { id: PeriodPreset; label: string }[] = [
   { id: '7d', label: '7 days' },
@@ -22,21 +22,6 @@ export function PeriodFilters() {
     clearPreset,
     exportCsv,
   } = useDashboard()
-  const [rangeInput, setRangeInput] = useState(formatRangeLabel(dateRange))
-
-  useEffect(() => {
-    setRangeInput(formatRangeLabel(dateRange))
-  }, [dateRange])
-
-  const commitRange = () => {
-    const parsed = parseTypedRange(rangeInput)
-    if (parsed) {
-      setDateRange(parsed)
-      clearPreset()
-    } else {
-      setRangeInput(formatRangeLabel(dateRange))
-    }
-  }
 
   return (
     <div className="mb-[22px] flex flex-wrap items-center gap-2">
@@ -53,21 +38,13 @@ export function PeriodFilters() {
           {p.label}
         </button>
       ))}
-      <div className="flex h-[30px] w-full min-w-0 items-center gap-1.5 rounded-lg border border-[var(--border2)] bg-[var(--s2)] px-3 sm:w-auto">
-        <input
-          type="text"
-          value={rangeInput}
-          onChange={(e) => setRangeInput(e.target.value)}
-          onBlur={commitRange}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              commitRange()
-            }
-          }}
-          className="w-full min-w-0 cursor-text border-none bg-transparent font-mono-dm text-[11px] text-[var(--text)] outline-none sm:w-[220px]"
-        />
-      </div>
+      <DateRangePicker
+        value={dateRange}
+        onChange={(range) => {
+          setDateRange(range)
+          clearPreset()
+        }}
+      />
       <button type="button" className="btn-csv w-full justify-center sm:ml-auto sm:w-auto" onClick={exportCsv}>
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
